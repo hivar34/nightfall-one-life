@@ -172,7 +172,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.6</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.7</div>
 <div id="sbToast" style="position:fixed;left:50%;bottom:44px;transform:translateX(-50%);padding:6px 12px;border-radius:8px;background:rgba(20,10,40,0.82);color:#ff8fb8;font:700 13px system-ui,sans-serif;letter-spacing:0.04em;pointer-events:none;user-select:none;z-index:6;opacity:0;transition:opacity .3s"></div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button><button id="shopBtn" class="mbtn" type="button" tabindex="-1" title="Skin shop (K)" aria-label="Skin shop"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="3.5" y="0.5" width="3" height="2.5"/><rect x="2.5" y="3.2" width="5" height="3"/><rect x="1" y="3.4" width="1.3" height="2.6"/><rect x="7.7" y="3.4" width="1.3" height="2.6"/><rect x="3" y="6.4" width="1.6" height="3.1"/><rect x="5.4" y="6.4" width="1.6" height="3.1"/></svg></button></div>
@@ -1281,19 +1281,20 @@ const SKINS = [
 ];
 function skinById(id) { return SKINS.find(k => k.id === (id | 0)) || SKINS[0]; }
 // body in runner-local units (feet at 0,0; 40 tall); sw = run swing, air = airborne pose, t = time (for animated skins)
-function drawRunner(c, sk, sw, air, t, silhouette) {
+function drawRunner(c, sk, sw, air, t, silhouette, po) { // po (v0.8.7, optional): { l1, l2, a1, a2, lk, cape } limb angles for the jump animation
   const col = v => silhouette || v;
   if (sk.glow && !silhouette) { const g = c.createRadialGradient(0, -22, 4, 0, -22, 36); g.addColorStop(0, `rgba(${sk.glow},0.32)`); g.addColorStop(1, `rgba(${sk.glow},0)`);
     c.fillStyle = g; c.fillRect(-36, -58, 72, 72); }
-  if (sk.cape) { c.fillStyle = col(sk.cape); c.save(); c.translate(-9, -30); c.rotate(air ? 0.5 : 0.18 + Math.abs(sw) * 0.12); c.fillRect(-6, 0, 7, 22); c.restore(); }
+  if (sk.cape) { c.fillStyle = col(sk.cape); c.save(); c.translate(-9, -30); c.rotate(po ? po.cape : air ? 0.5 : 0.18 + Math.abs(sw) * 0.12); c.fillRect(-6, 0, 7, 22); c.restore(); }
   c.fillStyle = col(sk.legs);
-  c.save(); c.translate(-6, -14); c.rotate(air ? -0.5 : sw * 0.7); c.fillRect(-4, 0, 8, 14); c.restore();
-  c.save(); c.translate(6, -14); c.rotate(air ? 0.4 : -sw * 0.7); c.fillRect(-4, 0, 8, 14); c.restore();
+  const lh = po ? 14 * po.lk : 14;
+  c.save(); c.translate(-6, -14); c.rotate(po ? po.l1 : air ? -0.5 : sw * 0.7); c.fillRect(-4, 0, 8, lh); c.restore();
+  c.save(); c.translate(6, -14); c.rotate(po ? po.l2 : air ? 0.4 : -sw * 0.7); c.fillRect(-4, 0, 8, lh); c.restore();
   c.fillStyle = col(sk.aurora ? `hsl(${(t * 50) % 360},90%,62%)` : sk.torso); c.fillRect(-10, -30, 20, 17);
   if (sk.cape && !silhouette) { c.fillStyle = '#ffd23f'; c.fillRect(-10, -30, 20, 2); c.fillRect(-1, -28, 2, 15); }
   c.fillStyle = col(sk.arms);
-  c.save(); c.translate(-12, -29); c.rotate(air ? -2.4 : -sw * 0.8); c.fillRect(-3, 0, 6, 14); c.restore();
-  c.save(); c.translate(12, -29); c.rotate(air ? 2.4 : sw * 0.8); c.fillRect(-3, 0, 6, 14); c.restore();
+  c.save(); c.translate(-12, -29); c.rotate(po ? po.a1 : air ? -2.4 : -sw * 0.8); c.fillRect(-3, 0, 6, 14); c.restore();
+  c.save(); c.translate(12, -29); c.rotate(po ? po.a2 : air ? 2.4 : sw * 0.8); c.fillRect(-3, 0, 6, 14); c.restore();
   c.fillStyle = col(sk.head); c.fillRect(-8, -42, 16, 13);
   if (!silhouette) { c.fillStyle = sk.eye; c.fillRect(1, -38, 3, 3); c.fillRect(5, -38, 2, 3); c.fillRect(1, -33, 6, 1.5); }
   c.fillStyle = col(sk.accC || '#000');
@@ -1370,18 +1371,84 @@ function skinIcon(id, locked) { // small pixel runner as a data URL (scoreboard 
   try { return (skinIconCache[key] = c2.toDataURL()); } catch (e) { return ''; }
 }
 
+// ---- v0.8.7 jump animation: purely visual. Reads P (never writes it), own particles + own PRNG, so physics / RNG / platforms are unchanged.
+// Phases: takeoff crouch -> stretch while rising -> tuck (+ forward flip on full-hold jumps) at the apex -> falling pose -> landing squash + dust.
+const JA = { last: 0, wasG: true, prevVy: 0, airT: 9, landT: 9, jumped: false, big: false, flip: -1, spin: 0, maxVy: 0, phase: 'run', fx: [], seed: 7, flips: 0, cut: 0, sx: 0, sy: 0 };
+function jaRnd() { JA.seed = (JA.seed * 16807) % 2147483647; return JA.seed / 2147483647; }
+function jaPuff(x, y, n, dir, spd, size, col, life) { // dir: -1 left/back, 1 right, 0 both sides
+  for (let i = 0; i < n; i++) { const d = dir || (i % 2 ? 1 : -1), r = jaRnd();
+    if (JA.fx.length > 40) JA.fx.shift();
+    JA.fx.push({ x: x + d * (4 + r * 8), y: y - 1 - jaRnd() * 3, vx: d * spd * (0.45 + 0.55 * jaRnd()), vy: -spd * (0.08 + 0.22 * jaRnd()), r: size * (0.6 + 0.5 * r), t: 0, life: life * (0.75 + 0.4 * jaRnd()), c: col }); }
+}
+const jaEase = u => u * u * (3 - 2 * u);
+function lerpPose(A, B, u) { return { l1: lerp(A.l1, B.l1, u), l2: lerp(A.l2, B.l2, u), a1: lerp(A.a1, B.a1, u), a2: lerp(A.a2, B.a2, u), lk: lerp(A.lk, B.lk, u), cape: lerp(A.cape, B.cape, u) }; }
+const POSE = { // l1 back leg, l2 front leg, a1 back arm, a2 front arm (radians; negative swings forward), lk leg length factor
+  crouch: { l1: 0.75, l2: -0.75, a1: 0.9, a2: 1.1, lk: 0.85, cape: 0.35 },
+  rise:   { l1: 0.55, l2: -1.05, a1: -2.7, a2: 2.5, lk: 1, cape: 0.75 },
+  tuck:   { l1: -1.45, l2: -1.6, a1: -1.25, a2: -0.95, lk: 0.72, cape: 1.1 },
+  fall:   { l1: 0.3, l2: -0.4, a1: -2.0, a2: 1.9, lk: 1, cape: 0.95 },
+  land:   { l1: 0.85, l2: -0.85, a1: 0.75, a2: -1.0, lk: 0.8, cape: 0.3 } };
+function jumpAnim() { // advance the animation state from what the simulation did since the last drawn frame
+  let dt = time - JA.last; JA.last = time; if (dt < 0 || dt > 0.25) dt = 0;
+  const g = !!P.ground, alive = state !== 'dead' && !P.stunned;
+  const takeoff = alive && !g && P.vy < -500 && (JA.wasG || P.vy < JA.prevVy - 400); // fresh jump (also catches land + instant buffered jump)
+  if (!g && !JA.wasG && takeoff && JA.jumped) { JA.landT = 0; }
+  if (g && !JA.wasG) { // landed
+    JA.landT = 0; if (JA.flip >= 0 && JA.flip < 1) JA.cut++;
+    const imp = clamp(JA.maxVy / 1400, 0, 1); jaPuff(P.x, P.y, 6 + (imp * 6 | 0), 0, 70 + imp * 90, 5 + imp * 3, imp > 0.5 ? '#e6e0ff' : '#c9c3ff', 0.42);
+    JA.jumped = false; JA.maxVy = 0;
+  }
+  if (takeoff) { JA.airT = 0; JA.jumped = true; JA.big = false; JA.flip = -1; JA.maxVy = 0; jaPuff(P.x - 4, P.y, 4, -1, 90, 4, '#b8b0e8', 0.32); }
+  if (!g) { JA.airT += dt; JA.maxVy = Math.max(JA.maxVy, P.vy); } else { JA.landT += dt; JA.airT = 9; }
+  // forward flip on a full-hold (long) jump, started near the apex; a short tap gets the tuck only
+  if (alive && !g && JA.jumped && JA.flip === -1 && P.vy > -260 && P.holdT >= HOLD_MAX * 0.85) { JA.flip = 0; JA.big = true; }
+  if (JA.flip >= 0) { JA.flip += dt / (g ? 0.07 : 0.32); if (JA.flip >= 1) { JA.flip = -2; JA.flips++; } } // landing early finishes the spin fast
+  JA.spin = JA.flip >= 0 ? jaEase(Math.min(1, JA.flip)) * Math.PI * 2 : 0;
+  if (!alive) { JA.flip = JA.flip >= 0 ? -2 : JA.flip; JA.spin = 0; }
+  JA.wasG = g; JA.prevVy = P.vy;
+  for (let i = JA.fx.length - 1; i >= 0; i--) { const f = JA.fx[i]; f.t += dt; if (f.t >= f.life) { JA.fx.splice(i, 1); continue; } f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 1 - Math.min(1, dt * 5); f.vy += 60 * dt; }
+}
+function playerPose() { // -> { pose, sx, sy, rot }  (sx/sy: extra scale, rot: extra forward rotation)
+  const g = !!P.ground, vy = P.vy;
+  if (state === 'dead' || P.stunned) return { pose: null, sx: 1, sy: 1, rot: 0, ph: 'hit' };
+  if (g) {
+    if (JA.landT < 0.16) { const u = JA.landT / 0.16; return { pose: lerpPose(POSE.land, runPose(), jaEase(u)), sx: 1, sy: 1, rot: 0, ph: 'land' }; }
+    return { pose: null, sx: 1, sy: 1, rot: 0, ph: 'run' };
+  }
+  if (!JA.jumped) { const u = clamp(vy / 600, 0, 1); return { pose: lerpPose(POSE.rise, POSE.fall, 0.5 + u * 0.5), sx: 1, sy: 1, rot: 0, ph: 'fall' }; } // walked off an edge
+  if (JA.airT < 0.08) { const u = clamp((JA.airT - 0.03) / 0.05, 0, 1); return { pose: lerpPose(POSE.crouch, POSE.rise, jaEase(u)), sx: lerp(1.22, 0.9, u), sy: lerp(0.8, 1.12, u), rot: 0, ph: 'takeoff' }; }
+  const st = clamp(-vy / JUMP_V, 0, 1); // 1 right after take-off -> 0 at the apex
+  if (vy < -320) return { pose: lerpPose(POSE.tuck, POSE.rise, clamp((-vy - 320) / 200, 0, 1)), sx: 1 - 0.1 * st, sy: 1 + 0.13 * st, rot: 0, ph: 'rise' };
+  if (vy < 260 || JA.flip >= 0) { const sp = JA.flip >= 0, tk = sp ? Math.sin(Math.min(1, JA.flip) * Math.PI) : 1 - Math.abs(vy) / 300;
+    return { pose: lerpPose(POSE.fall, POSE.tuck, clamp(sp ? 0.35 + tk : tk + 0.25, 0, 1)), sx: 1.03, sy: 0.95, rot: sp ? JA.spin : 0.32 * clamp(1 - Math.abs(vy) / 260, 0, 1), ph: sp ? 'flip' : 'apex' }; }
+  const u = clamp((vy - 260) / 500, 0, 1), fl = Math.sin(time * 22) * 0.28 * u;
+  const po = lerpPose(POSE.tuck, POSE.fall, clamp(u * 3, 0, 1)); po.a1 += fl; po.a2 -= fl;
+  return { pose: po, sx: 1 - 0.05 * u, sy: 1 + 0.07 * u, rot: 0, ph: 'fall' };
+}
+function runPose() { const sw = Math.sin(P.run); return { l1: sw * 0.7, l2: -sw * 0.7, a1: -sw * 0.8, a2: sw * 0.8, lk: 1, cape: 0.18 + Math.abs(sw) * 0.12 }; }
+function drawJumpFx() {
+  for (const f of JA.fx) { const u = f.t / f.life; ctx.globalAlpha = 0.5 * (1 - u); ctx.fillStyle = f.c; const r = f.r * (0.6 + u * 0.9); ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2); }
+  // subtle speed lines behind fast vertical motion (rising: below the feet, falling: above the head)
+  if (!P.ground && state !== 'dead' && Math.abs(P.vy) > 520) { const up = P.vy < 0, a = clamp((Math.abs(P.vy) - 520) / 500, 0, 1) * 0.35, len = 10 + a * 30;
+    ctx.globalAlpha = a; ctx.fillStyle = '#ffffff';
+    for (let i = -1; i <= 1; i++) ctx.fillRect(P.x - 4 + i * 8, up ? P.y + 4 + Math.abs(i) * 4 : P.y - PH - 8 - len - Math.abs(i) * 4, 1.5, len - Math.abs(i) * 5); }
+  ctx.globalAlpha = 1;
+}
 function drawPlayer() {
-  const sq = P.squash;
-  const fw = clamp(PW * sq, PW * 0.7, PW * 1.5), fh = clamp(PH / sq, PH * 0.7, PH * 1.4);
+  jumpAnim();
+  const sq = P.squash, ap = playerPose(); JA.phase = ap.ph;
+  const fw = clamp(PW * sq * ap.sx, PW * 0.7, PW * 1.5), fh = clamp(PH / sq * ap.sy, PH * 0.7, PH * 1.4);
   const x = P.x, y = P.y;
+  drawJumpFx();
   ctx.save();
   ctx.translate(x, y);
   const tilt = P.ground ? 0 : clamp(P.vy / 3000, -0.15, 0.25);
   ctx.rotate(P.stunned ? -0.4 : tilt);
   const k = fh / PH, kw = fw / PW;
+  if (ap.rot) { ctx.translate(0, -20 * k); ctx.rotate(ap.rot); ctx.translate(0, 20 * k); } // spin / tuck around the body centre: accessories follow
   ctx.scale(kw, k);
   const sw = Math.sin(P.run) * (P.ground ? 1 : 0.2);
-  drawRunner(ctx, mySkin(), sw, !P.ground, time);
+  drawRunner(ctx, mySkin(), sw, !P.ground, time, null, ap.pose);
   ctx.restore();
 }
 
@@ -1909,7 +1976,7 @@ Music.onChange = refreshMenus; // auto rotation updates the song window
 window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; },
   get points() { return points; }, get combo() { return combo; }, get comboMult() { return comboMult(); }, get bestPoints() { return bestPoints; }, get lastAward() { return lastAward; }, get popups() { return popups.length; }, start, press, release,
   get checkpoint() { return checkpoint; }, set checkpoint(v) { checkpoint = v | 0; }, restartFromStart, get bot() { return botOn; }, set bot(v) { botOn = !!v; },
-  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, get player() { return P; }, get plats() { return plats; },
+  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, anim: { get phase() { return JA.phase; }, get flips() { return JA.flips; }, get cut() { return JA.cut; }, get fx() { return JA.fx.length; }, screen() { return { x: (P.x - cam.x) * SCALE, y: (P.y - cam.y + VIEW_H * 0.5 - 60) * SCALE, s: SCALE }; } }, get player() { return P; }, get plats() { return plats; },
   audio: { get volume() { return volume; }, set volume(v) { setVolume(v); }, get muted() { return muted; }, toggleMute,
     get masterTarget() { return master ? masterLevel() : null; }, get masterGain() { return master ? master.gain.value : null; },
     get music() { return Music.playing; }, get ctxState() { return AC ? AC.state : null; },
