@@ -65,7 +65,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.6</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.6.1</div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button></div>
 <div id="menuBack"></div>
@@ -95,7 +95,7 @@ const G = 2400, JUMP_V = 820, HOLD_G = 0.4, HOLD_MAX = 0.25;
 const PW = 28, PH = 40;           // player size (world units)
 const COYOTE = 0.08, BUFFER = 0.12;
 const DT = 1 / 120;
-const CAPS = ['KEEP GOING', "DON'T FALL", 'NO CHECKPOINT', 'KEEP GOING', 'ONE LIFE', "DON'T FALL"];
+const CAPS = ['KEEP GOING', "DON'T FALL", 'STAY SHARP', 'KEEP GOING', 'FASTER!', "DON'T FALL"];
 const CAPS_CP = ['KEEP GOING', "DON'T FALL", 'FASTER!', 'KEEP GOING', 'STAY SHARP', "DON'T FALL"]; // used once a checkpoint exists
 const CHECKPOINTS = [30, 60];     // platform idx that become checkpoints (per-run session, not persisted)
 
@@ -278,6 +278,9 @@ const Music = (() => {
   ];
   const KICK = [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0];
   let started = false, timer = null, nextT = 0, step = 0, shaper = null;
+  let rotEnd = Infinity, rotCount = 0, onChange = null; const rotHist = [];
+  const SONGLEN = (() => { const m = /[?&]songlen=(\d+(?:\.\d+)?)/.exec(location.search); return m ? Math.max(2, parseFloat(m[1])) : 0; })(); // debug override (s)
+  function songDur() { return SONGLEN || 120 + Math.random() * 30; } // 2:00-2:30
   let cur = 0, curOut = null; // active track index + its own fade gain (-> musicBus); a fresh gain per switch, old one fades + disconnects
   function out() { return curOut || musicBus; }
   function getShaper() { // shared soft-clip for the 808
@@ -457,11 +460,21 @@ const Music = (() => {
     const now = AC.currentTime, T = TRACKS[cur], st = 60 / T.bpm / 4;
     if (nextT < now - 0.05) nextT = now + 0.05; // fell behind (tab throttled etc.): skip ahead, never burst
     while (nextT < now + LOOKAHEAD) { if (!muted && volume > 0) T.sched(step, nextT, st); step = (step + 1) % 128; nextT += st; }
+    if (now >= rotEnd) rotate(); // AudioContext clock: stops while the tab is hidden (context suspended)
   }
-  return {
+  function rotate() { // random different track, same fade path as a manual switch
+    if (TRACKS.length < 2) { rotEnd = AC.currentTime + songDur(); return; }
+    let k; do k = (Math.random() * TRACKS.length) | 0; while (k === cur);
+    rotCount++; api.setTrack(k);
+  }
+  const api = {
     start() { if (started || !AC) return; started = true;
       curOut = AC.createGain(); curOut.gain.value = 1; curOut.connect(musicBus);
-      nextT = AC.currentTime + 0.1; step = 0; timer = setInterval(tick, TICK); },
+      nextT = AC.currentTime + 0.1; step = 0; timer = setInterval(tick, TICK);
+      rotEnd = AC.currentTime + songDur(); rotHist.push(cur); },
+    set onChange(f) { onChange = f; },
+    get rotation() { return { left: started && AC ? Math.max(0, rotEnd - AC.currentTime) : null, count: rotCount, history: rotHist.slice(), songLen: SONGLEN || '120-150' }; },
+    rotateNow() { if (started && AC) rotate(); },
     get playing() { return started; },
     get tracks() { return TRACKS; },
     get track() { return cur; },
@@ -469,9 +482,12 @@ const Music = (() => {
     // switch track: old track's gain fades out (~0.25s) and is disconnected later, new one restarts its loop and fades in
     setTrack(i) {
       i = ((i % TRACKS.length) + TRACKS.length) % TRACKS.length;
+      if (started && AC) rotEnd = AC.currentTime + songDur(); // any pick (manual or auto) restarts the 2-2.5 min timer
       if (i === cur) return;
       cur = i; try { localStorage.setItem('nightfall_track', TRACKS[i].id); } catch (e) {}
       if (!started || !AC) return; // remembered; plays when audio starts
+      rotHist.push(i); if (rotHist.length > 50) rotHist.shift();
+      if (onChange) try { onChange(); } catch (e) {}
       const t = AC.currentTime, old = curOut;
       if (old) { old.gain.cancelScheduledValues(t); old.gain.setValueAtTime(old.gain.value, t); old.gain.linearRampToValueAtTime(0, t + 0.25);
         setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 2600); }
@@ -484,6 +500,7 @@ const Music = (() => {
       musicDuck.gain.setTargetAtTime(on ? 0.45 : 1, t, on ? 0.15 : 0.4);
       musicLP.frequency.setTargetAtTime(on ? 900 : 18000, t, on ? 0.2 : 0.5); },
   };
+  return api;
 })();
 document.addEventListener('visibilitychange', () => { if (!AC) return; if (document.hidden) AC.suspend(); else AC.resume(); });
 
@@ -504,8 +521,7 @@ function start(fromCp = 0) {
   combo = 0; prevClutch = false; popups = []; newBestPts = false;
   if (!fromCp) checkpoint = 0; // restart from the very beginning clears the session checkpoint
   reset(fromCp); state = 'play';
-  if (fromCp) showCaption(['CHECKPOINT ' + fromCp, 'GO!'], '#5dffb0', 1.8);
-  else showCaption(['NO CHECKPOINT.', 'ONE LIFE.'], '#ffd23f', 2.2);
+  if (fromCp) showCaption(['CHECKPOINT ' + fromCp + ' SAVED', 'GO!'], '#5dffb0', 1.8); // fresh run: no start caption
   SFX.start(); pressed = true; P.holding = false;
 }
 function restartFromStart() { start(0); }
@@ -1188,8 +1204,7 @@ function drawUI() {
   if (state === 'menu') {
     ctx.fillStyle = 'rgba(5,4,20,0.45)'; ctx.fillRect(0, 0, cw, ch);
     const ts = Math.min(cw / 9, u * 13);
-    outlined('NIGHTFALL', cw / 2, ch * 0.3, ts, '#ffd23f');
-    outlined('ONE LIFE', cw / 2, ch * 0.3 + ts * 1.05, ts * 0.7, '#ffffff');
+    outlined('NIGHTFALL', cw / 2, ch * 0.36, ts, '#ffd23f');
     const p = 0.6 + 0.4 * Math.sin(time * 5);
     ctx.globalAlpha = p; outlined(isTouch ? 'TAP TO START' : 'SPACE / CLICK TO START', cw / 2, ch * 0.62, Math.min(cw / 16, u * 6), '#ffffff'); ctx.globalAlpha = 1;
     outlined('HOLD = HIGHER JUMP · CHECKPOINTS AT 30 & 60', cw / 2, ch * 0.62 + u * 8, Math.min(cw / 30, u * 3.4), '#c9c3ff', 'center', 0.12);
@@ -1264,7 +1279,7 @@ function frame(now) {
 }
 resize();
 reset();
-if (demo) { state = 'play'; showCaption(['NO CHECKPOINT.', 'ONE LIFE.'], '#ffd23f', 2.2); }
+if (demo) { state = 'play'; }
 // ================= MENU WINDOWS (songs / backgrounds) =================
 // DOM overlay like the volume bar: every event stops at the menu, so nothing here jumps or starts a run.
 let menuOpen = null; // null | 'song' | 'bg'
@@ -1304,7 +1319,7 @@ function refreshMenus() {
   mBack.classList.toggle('open', !!menuOpen);
   songMenu.classList.toggle('open', menuOpen === 'song'); bgMenu.classList.toggle('open', menuOpen === 'bg');
   songBtn.classList.toggle('on', menuOpen === 'song'); bgBtn.classList.toggle('on', menuOpen === 'bg');
-  const note = state === 'play' ? 'RUN PAUSED \u00b7 close to resume' : '';
+  const note = state === 'play' ? 'RUN PAUSED \u00b7 ' + (checkpoint > 0 ? 'CHECKPOINT ' + checkpoint + ' SAVED' : 'close to resume') : '';
   songMenu.querySelector('.mnote').textContent = note; bgMenu.querySelector('.mnote').textContent = note;
   [...songList.children].forEach((b, i) => b.classList.toggle('on', i === Music.track));
   [...bgList.children].forEach((b, i) => b.classList.toggle('on', i === bgIdx));
@@ -1324,15 +1339,17 @@ mBack.addEventListener('pointerdown', () => closeMenu());
 document.querySelectorAll('.mclose').forEach(b => b.addEventListener('pointerdown', e => { if (e.button > 0) return; closeMenu(); }));
 bgRandBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; toggleBgRandom(); });
 refreshMenus();
+Music.onChange = refreshMenus; // auto rotation updates the song window
 window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; },
   get points() { return points; }, get combo() { return combo; }, get comboMult() { return comboMult(); }, get bestPoints() { return bestPoints; }, get lastAward() { return lastAward; }, get popups() { return popups.length; }, start, press, release,
-  get checkpoint() { return checkpoint; }, restartFromStart, get bot() { return botOn; }, set bot(v) { botOn = !!v; },
+  get checkpoint() { return checkpoint; }, set checkpoint(v) { checkpoint = v | 0; }, restartFromStart, get bot() { return botOn; }, set bot(v) { botOn = !!v; },
   get groundIdx() { return P && P.ground ? P.ground.idx : null; }, get player() { return P; }, get plats() { return plats; },
   audio: { get volume() { return volume; }, set volume(v) { setVolume(v); }, get muted() { return muted; }, toggleMute,
     get masterTarget() { return master ? masterLevel() : null; }, get masterGain() { return master ? master.gain.value : null; },
     get music() { return Music.playing; }, get ctxState() { return AC ? AC.state : null; },
     get track() { return Music.track; }, get trackName() { return Music.tracks[Music.track].name; }, get trackIds() { return Music.tracks.map(t => t.id); },
-    setTrack: selectTrack, get trackOutGain() { return Music.outGain; } },
+    setTrack: selectTrack, get trackOutGain() { return Music.outGain; },
+    get rotation() { return Music.rotation; }, rotateNow() { Music.rotateNow(); } },
   bg: { get idx() { return bgIdx; }, get name() { return THEMES[bgIdx].name; }, get ids() { return THEMES.map(t => t.id); },
     get random() { return bgRandom; }, get manual() { return bgManual; }, get fading() { return !!bgFade; }, select: selectBg, toggleRandom: toggleBgRandom },
   menu: { get open() { return menuOpen; }, show: openMenu, close: closeMenu, get paused() { return !!menuOpen && state === 'play'; } } };
