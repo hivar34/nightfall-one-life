@@ -172,7 +172,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.7</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.8</div>
 <div id="sbToast" style="position:fixed;left:50%;bottom:44px;transform:translateX(-50%);padding:6px 12px;border-radius:8px;background:rgba(20,10,40,0.82);color:#ff8fb8;font:700 13px system-ui,sans-serif;letter-spacing:0.04em;pointer-events:none;user-select:none;z-index:6;opacity:0;transition:opacity .3s"></div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button><button id="shopBtn" class="mbtn" type="button" tabindex="-1" title="Skin shop (K)" aria-label="Skin shop"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="3.5" y="0.5" width="3" height="2.5"/><rect x="2.5" y="3.2" width="5" height="3"/><rect x="1" y="3.4" width="1.3" height="2.6"/><rect x="7.7" y="3.4" width="1.3" height="2.6"/><rect x="3" y="6.4" width="1.6" height="3.1"/><rect x="5.4" y="6.4" width="1.6" height="3.1"/></svg></button></div>
@@ -1371,10 +1371,17 @@ function skinIcon(id, locked) { // small pixel runner as a data URL (scoreboard 
   try { return (skinIconCache[key] = c2.toDataURL()); } catch (e) { return ''; }
 }
 
-// ---- v0.8.7 jump animation: purely visual. Reads P (never writes it), own particles + own PRNG, so physics / RNG / platforms are unchanged.
-// Phases: takeoff crouch -> stretch while rising -> tuck (+ forward flip on full-hold jumps) at the apex -> falling pose -> landing squash + dust.
-const JA = { last: 0, wasG: true, prevVy: 0, airT: 9, landT: 9, jumped: false, big: false, flip: -1, spin: 0, maxVy: 0, phase: 'run', fx: [], seed: 7, flips: 0, cut: 0, sx: 0, sy: 0 };
+// ---- v0.8.7/v0.8.8 jump animation: purely visual. Reads P (never writes it), own particles + own PRNGs (never Math.random), so physics / RNG / platforms are unchanged.
+// Phases: takeoff crouch -> stretch while rising -> tuck at the apex (+ held-jump extra move) -> falling pose -> landing squash + dust.
+// v0.8.8: every jump rolls a visual variant set (jvRnd); two consecutive jumps never share the same set. Full-hold jumps get an extra move.
+const JA = { last: 0, wasG: true, prevVy: 0, airT: 9, landT: 9, jumped: false, big: false, flip: -1, spin: 0, maxVy: 0, phase: 'run', fx: [], seed: 7, flips: 0, cut: 0, sx: 0, sy: 0,
+  y0: 0, V: null, ex: null, tw: 1, jumps: 0, keys: [], extras: [] };
 function jaRnd() { JA.seed = (JA.seed * 16807) % 2147483647; return JA.seed / 2147483647; }
+// separate visual-only PRNG for the variety (seeded without calling Math.random, so the game's random sequence is untouched)
+const JV = { s: 1 + ((() => { try { return crypto.getRandomValues(new Uint32Array(1))[0]; } catch (e) { return Date.now(); } })() % 2147483645) };
+function jvRnd() { JV.s = (JV.s * 48271) % 2147483647; return JV.s / 2147483647; }
+const jvR = (a, b) => a + jvRnd() * (b - a);
+const jvB = (v, a, b) => Math.min(2, Math.max(0, ((v - a) / (b - a) * 3) | 0)); // 3 buckets
 function jaPuff(x, y, n, dir, spd, size, col, life) { // dir: -1 left/back, 1 right, 0 both sides
   for (let i = 0; i < n; i++) { const d = dir || (i % 2 ? 1 : -1), r = jaRnd();
     if (JA.fx.length > 40) JA.fx.shift();
@@ -1387,7 +1394,49 @@ const POSE = { // l1 back leg, l2 front leg, a1 back arm, a2 front arm (radians;
   rise:   { l1: 0.55, l2: -1.05, a1: -2.7, a2: 2.5, lk: 1, cape: 0.75 },
   tuck:   { l1: -1.45, l2: -1.6, a1: -1.25, a2: -0.95, lk: 0.72, cape: 1.1 },
   fall:   { l1: 0.3, l2: -0.4, a1: -2.0, a2: 1.9, lk: 1, cape: 0.95 },
-  land:   { l1: 0.85, l2: -0.85, a1: 0.75, a2: -1.0, lk: 0.8, cape: 0.3 } };
+  land:   { l1: 0.85, l2: -0.85, a1: 0.75, a2: -1.0, lk: 0.8, cape: 0.3 },
+  star:   { l1: 0.95, l2: -0.95, a1: -2.25, a2: 2.25, lk: 1.08, cape: 1.25 },   // held extra: star / spread
+  layout: { l1: 0.12, l2: -0.12, a1: -2.95, a2: 2.95, lk: 1.05, cape: 1.2 } };  // held extra: straight body for the twist
+function rollVariant() { // per-jump visual variant set; rerolled until it differs from the previous jump's set
+  const prev = JA.V ? JA.V.key : '';
+  let v, n = 0;
+  do {
+    const r = jvRnd();
+    v = { dust: jvRnd() >= 0.37,                                   // ~37% of jumps skip the take-off dust kick
+      pose: r < 0.55 ? 'base' : r < 0.78 ? 'reach' : 'split',      // occasional variant poses
+      side: jvRnd() < 0.5 ? 1 : 2,                                  // which arm reaches
+      crouch: jvR(0.6, 1.25), cT: jvR(0.065, 0.1),                  // take-off squash depth, crouch duration (s)
+      stretch: jvR(0.5, 1.5),                                       // rising stretch intensity
+      tuck: jvR(0.45, 1.1), tlk: jvR(0.62, 0.9),                    // tuck depth (0=open, 1=full), knee height (leg length)
+      tuckV: jvR(220, 440), fallV: jvR(190, 330),                   // pose timing offsets (|vy| where the tuck starts / ends)
+      tRot: jvR(0.1, 0.5), lean: jvR(-0.1, 0.16),                   // apex forward tuck rotation, body lean (rad)
+      da1: jvR(-0.4, 0.4), da2: jvR(-0.4, 0.4), dl1: jvR(-0.3, 0.3), dl2: jvR(-0.3, 0.3) }; // arm / leg angle offsets
+    v.key = [v.dust ? 'D' : 'n', v.pose[0], v.pose === 'reach' ? v.side : 0, jvB(v.tuck, 0.45, 1.1), jvB(v.stretch, 0.5, 1.5), jvB(v.lean, -0.1, 0.16), jvB(v.crouch, 0.6, 1.25)].join('');
+  } while (v.key === prev && ++n < 20);
+  if (v.key === prev) { v.dust = !v.dust; v.key = (v.dust ? 'D' : 'n') + v.key.slice(1); }
+  const off = P0 => ({ l1: P0.l1 + v.dl1, l2: P0.l2 + v.dl2, a1: P0.a1 + v.da1, a2: P0.a2 + v.da2, lk: P0.lk, cape: P0.cape });
+  v.rise = off(POSE.rise); v.fall = off(POSE.fall);
+  v.cr = off(POSE.crouch); v.cr.a1 += jvR(-0.6, 0.6); v.cr.a2 += jvR(-0.6, 0.6); v.cr.l1 *= 0.7 + 0.4 * v.crouch; v.cr.l2 *= 0.7 + 0.4 * v.crouch; v.cr.lk = lerp(0.95, 0.78, (v.crouch - 0.6) / 0.65); // take-off crouch varies too
+  v.tk = lerpPose(POSE.fall, POSE.tuck, v.tuck); v.tk.lk = lerp(1, v.tlk, v.tuck); v.tk.l1 += v.dl1 * 0.5; v.tk.l2 += v.dl2 * 0.5;
+  if (v.pose === 'reach') { const up = -2.55 - jvRnd() * 0.4, dn = 0.45 + jvRnd() * 0.5; // one arm reaches high forward, the other swings back
+    for (const q of [v.rise, v.tk]) if (v.side === 1) { q.a1 = up; q.a2 = dn; } else { q.a2 = up; q.a1 = dn; } }
+  if (v.pose === 'split') { const sp = jvR(1.1, 1.45); // split leap: legs spread fore/aft instead of tucking
+    for (const q of [v.rise, v.tk]) { q.l1 = sp * 0.9; q.l2 = -sp; q.lk = 1.05; } }
+  JA.keys.push(v.key); if (JA.keys.length > 60) JA.keys.shift();
+  return v;
+}
+function rollExtra() { // held-jump extra move, fitted into the predicted time left before landing (back at take-off height)
+  const dy = Math.max(0, JA.y0 - P.y), tRem = (-P.vy + Math.sqrt(P.vy * P.vy + 2 * G * dy)) / G - 0.1;
+  const last = JA.ex ? JA.ex.type : '', types = ['double', 'star', 'twist'].filter(t => t !== last);
+  let type = types[(jvRnd() * types.length) | 0], e;
+  if (type === 'double' && tRem < 0.42) type = 'star';
+  if (type === 'double') e = { type, turns: 2, dur: jvR(0.44, 0.52), spinEnd: 1, tw: 0 };
+  else if (type === 'star') e = { type, turns: 1, dur: jvR(0.44, 0.56), spinEnd: jvR(0.5, 0.62), tw: 0, hold: jvR(0.75, 0.88) };
+  else e = { type, turns: 1, dur: jvR(0.36, 0.46), spinEnd: 1, tw: jvRnd() < 0.5 ? 1 : 2 };
+  e.dur = Math.max(0.24, Math.min(e.dur, tRem)); e.tRem = +tRem.toFixed(3);
+  JA.extras.push(type); if (JA.extras.length > 60) JA.extras.shift();
+  return e;
+}
 function jumpAnim() { // advance the animation state from what the simulation did since the last drawn frame
   let dt = time - JA.last; JA.last = time; if (dt < 0 || dt > 0.25) dt = 0;
   const g = !!P.ground, alive = state !== 'dead' && !P.stunned;
@@ -1398,15 +1447,29 @@ function jumpAnim() { // advance the animation state from what the simulation di
     const imp = clamp(JA.maxVy / 1400, 0, 1); jaPuff(P.x, P.y, 6 + (imp * 6 | 0), 0, 70 + imp * 90, 5 + imp * 3, imp > 0.5 ? '#e6e0ff' : '#c9c3ff', 0.42);
     JA.jumped = false; JA.maxVy = 0;
   }
-  if (takeoff) { JA.airT = 0; JA.jumped = true; JA.big = false; JA.flip = -1; JA.maxVy = 0; jaPuff(P.x - 4, P.y, 4, -1, 90, 4, '#b8b0e8', 0.32); }
+  if (takeoff) { JA.airT = 0; JA.jumped = true; JA.big = false; JA.flip = -1; JA.maxVy = 0; JA.y0 = P.y - P.vy / 60; JA.V = rollVariant(); JA.jumps++;
+    if (JA.V.dust) jaPuff(P.x - 4, P.y, 3 + (jvRnd() * 3 | 0), -1, jvR(70, 110), jvR(3.5, 5), '#b8b0e8', 0.32); }
   if (!g) { JA.airT += dt; JA.maxVy = Math.max(JA.maxVy, P.vy); } else { JA.landT += dt; JA.airT = 9; }
-  // forward flip on a full-hold (long) jump, started near the apex; a short tap gets the tuck only
-  if (alive && !g && JA.jumped && JA.flip === -1 && P.vy > -260 && P.holdT >= HOLD_MAX * 0.85) { JA.flip = 0; JA.big = true; }
-  if (JA.flip >= 0) { JA.flip += dt / (g ? 0.07 : 0.32); if (JA.flip >= 1) { JA.flip = -2; JA.flips++; } } // landing early finishes the spin fast
-  JA.spin = JA.flip >= 0 ? jaEase(Math.min(1, JA.flip)) * Math.PI * 2 : 0;
-  if (!alive) { JA.flip = JA.flip >= 0 ? -2 : JA.flip; JA.spin = 0; }
+  // held extra on a full-hold (long) jump, started near the apex; a short tap gets the randomized tuck only
+  if (alive && !g && JA.jumped && JA.flip === -1 && P.vy > -260 && P.holdT >= HOLD_MAX * 0.85) { JA.flip = 0; JA.big = true; JA.ex = rollExtra(); }
+  const ex = JA.ex;
+  if (JA.flip >= 0) { JA.flip += dt / (g ? 0.07 * ex.turns : ex.dur); if (JA.flip >= 1) { JA.flip = -2; JA.flips++; } } // landing early snap-finishes the move
+  const fu = JA.flip >= 0 ? Math.min(1, JA.flip) : 0;
+  JA.spin = JA.flip >= 0 ? jaEase(Math.min(1, fu / ex.spinEnd)) * Math.PI * 2 * ex.turns : 0;
+  JA.tw = JA.flip >= 0 && ex.tw ? Math.cos(jaEase(fu) * Math.PI * 2 * ex.tw) : 1; // twist: body turns around its long axis
+  if (!alive) { JA.flip = JA.flip >= 0 ? -2 : JA.flip; JA.spin = 0; JA.tw = 1; }
   JA.wasG = g; JA.prevVy = P.vy;
   for (let i = JA.fx.length - 1; i >= 0; i--) { const f = JA.fx[i]; f.t += dt; if (f.t >= f.life) { JA.fx.splice(i, 1); continue; } f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 1 - Math.min(1, dt * 5); f.vy += 60 * dt; }
+}
+function extraPose(V, fu) { // pose during the held-jump extra
+  const ex = JA.ex;
+  if (ex.type === 'double') return lerpPose(V.fall, POSE.tuck, clamp(0.45 + Math.sin(fu * Math.PI) * 1.2, 0, 1));
+  if (ex.type === 'twist') { const k = Math.sin(fu * Math.PI); return lerpPose(V.fall, POSE.layout, clamp(k * 1.6, 0, 1)); }
+  // star: tucked flip, then burst open into a star spread, then settle to the fall pose before landing
+  const se = ex.spinEnd;
+  if (fu < se) return lerpPose(V.fall, POSE.tuck, clamp(0.35 + Math.sin(fu / se * Math.PI), 0, 1));
+  if (fu < ex.hold) return lerpPose(POSE.tuck, POSE.star, jaEase(clamp((fu - se) / 0.12, 0, 1)));
+  return lerpPose(POSE.star, V.fall, jaEase(clamp((fu - ex.hold) / (1 - ex.hold), 0, 1)));
 }
 function playerPose() { // -> { pose, sx, sy, rot }  (sx/sy: extra scale, rot: extra forward rotation)
   const g = !!P.ground, vy = P.vy;
@@ -1415,15 +1478,19 @@ function playerPose() { // -> { pose, sx, sy, rot }  (sx/sy: extra scale, rot: e
     if (JA.landT < 0.16) { const u = JA.landT / 0.16; return { pose: lerpPose(POSE.land, runPose(), jaEase(u)), sx: 1, sy: 1, rot: 0, ph: 'land' }; }
     return { pose: null, sx: 1, sy: 1, rot: 0, ph: 'run' };
   }
-  if (!JA.jumped) { const u = clamp(vy / 600, 0, 1); return { pose: lerpPose(POSE.rise, POSE.fall, 0.5 + u * 0.5), sx: 1, sy: 1, rot: 0, ph: 'fall' }; } // walked off an edge
-  if (JA.airT < 0.08) { const u = clamp((JA.airT - 0.03) / 0.05, 0, 1); return { pose: lerpPose(POSE.crouch, POSE.rise, jaEase(u)), sx: lerp(1.22, 0.9, u), sy: lerp(0.8, 1.12, u), rot: 0, ph: 'takeoff' }; }
+  if (!JA.jumped || !JA.V) { const u = clamp(vy / 600, 0, 1); return { pose: lerpPose(POSE.rise, POSE.fall, 0.5 + u * 0.5), sx: 1, sy: 1, rot: 0, ph: 'fall' }; } // walked off an edge
+  const V = JA.V, ct = V.cT;
+  if (JA.airT < ct) { const u = clamp((JA.airT - ct * 0.38) / (ct * 0.62), 0, 1), c = V.crouch;
+    return { pose: lerpPose(V.cr, V.rise, jaEase(u)), sx: lerp(1 + 0.22 * c, 1 - 0.1 * V.stretch, u), sy: lerp(1 - 0.2 * c, 1 + 0.12 * V.stretch, u), rot: V.lean * (0.8 - 0.3 * u), ph: 'takeoff' }; }
   const st = clamp(-vy / JUMP_V, 0, 1); // 1 right after take-off -> 0 at the apex
-  if (vy < -320) return { pose: lerpPose(POSE.tuck, POSE.rise, clamp((-vy - 320) / 200, 0, 1)), sx: 1 - 0.1 * st, sy: 1 + 0.13 * st, rot: 0, ph: 'rise' };
-  if (vy < 260 || JA.flip >= 0) { const sp = JA.flip >= 0, tk = sp ? Math.sin(Math.min(1, JA.flip) * Math.PI) : 1 - Math.abs(vy) / 300;
-    return { pose: lerpPose(POSE.fall, POSE.tuck, clamp(sp ? 0.35 + tk : tk + 0.25, 0, 1)), sx: 1.03, sy: 0.95, rot: sp ? JA.spin : 0.32 * clamp(1 - Math.abs(vy) / 260, 0, 1), ph: sp ? 'flip' : 'apex' }; }
-  const u = clamp((vy - 260) / 500, 0, 1), fl = Math.sin(time * 22) * 0.28 * u;
-  const po = lerpPose(POSE.tuck, POSE.fall, clamp(u * 3, 0, 1)); po.a1 += fl; po.a2 -= fl;
-  return { pose: po, sx: 1 - 0.05 * u, sy: 1 + 0.07 * u, rot: 0, ph: 'fall' };
+  if (vy < -V.tuckV && JA.flip < 0) return { pose: lerpPose(V.tk, V.rise, clamp((-vy - V.tuckV) / 200, 0, 1)), sx: 1 - 0.1 * st * V.stretch, sy: 1 + 0.13 * st * V.stretch, rot: V.lean * (0.5 + 0.5 * st), ph: 'rise' };
+  if (JA.flip >= 0) { const fu = Math.min(1, JA.flip);
+    return { pose: extraPose(V, fu), sx: 1.03, sy: 0.95, rot: JA.spin, ph: 'flip', tw: JA.tw }; }
+  if (vy < V.fallV) { const tk = clamp(1 - Math.abs(vy) / (V.fallV + 40) + 0.25, 0, 1);
+    return { pose: lerpPose(V.fall, V.tk, tk), sx: 1.03, sy: 0.95, rot: V.tRot * clamp(1 - Math.abs(vy) / V.fallV, 0, 1) + V.lean * 0.5, ph: 'apex' }; }
+  const u = clamp((vy - V.fallV) / 500, 0, 1), fl = Math.sin(time * 22) * 0.28 * u;
+  const po = lerpPose(V.tk, V.fall, clamp(u * 3, 0, 1)); po.a1 += fl; po.a2 -= fl;
+  return { pose: po, sx: 1 - 0.05 * u, sy: 1 + 0.07 * u, rot: V.lean * 0.5 * (1 - u), ph: 'fall' };
 }
 function runPose() { const sw = Math.sin(P.run); return { l1: sw * 0.7, l2: -sw * 0.7, a1: -sw * 0.8, a2: sw * 0.8, lk: 1, cape: 0.18 + Math.abs(sw) * 0.12 }; }
 function drawJumpFx() {
@@ -1445,8 +1512,9 @@ function drawPlayer() {
   const tilt = P.ground ? 0 : clamp(P.vy / 3000, -0.15, 0.25);
   ctx.rotate(P.stunned ? -0.4 : tilt);
   const k = fh / PH, kw = fw / PW;
-  if (ap.rot) { ctx.translate(0, -20 * k); ctx.rotate(ap.rot); ctx.translate(0, 20 * k); } // spin / tuck around the body centre: accessories follow
-  ctx.scale(kw, k);
+  if (ap.rot) { ctx.translate(0, -20 * k); ctx.rotate(ap.rot); ctx.translate(0, 20 * k); } // spin / tuck / lean around the body centre: accessories follow
+  const tw = ap.tw === undefined ? 1 : (ap.tw < 0 ? Math.min(-0.12, ap.tw) : Math.max(0.12, ap.tw)); // twist (mirrors through the turn)
+  ctx.scale(kw * tw, k);
   const sw = Math.sin(P.run) * (P.ground ? 1 : 0.2);
   drawRunner(ctx, mySkin(), sw, !P.ground, time, null, ap.pose);
   ctx.restore();
@@ -1976,7 +2044,7 @@ Music.onChange = refreshMenus; // auto rotation updates the song window
 window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; },
   get points() { return points; }, get combo() { return combo; }, get comboMult() { return comboMult(); }, get bestPoints() { return bestPoints; }, get lastAward() { return lastAward; }, get popups() { return popups.length; }, start, press, release,
   get checkpoint() { return checkpoint; }, set checkpoint(v) { checkpoint = v | 0; }, restartFromStart, get bot() { return botOn; }, set bot(v) { botOn = !!v; },
-  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, anim: { get phase() { return JA.phase; }, get flips() { return JA.flips; }, get cut() { return JA.cut; }, get fx() { return JA.fx.length; }, screen() { return { x: (P.x - cam.x) * SCALE, y: (P.y - cam.y + VIEW_H * 0.5 - 60) * SCALE, s: SCALE }; } }, get player() { return P; }, get plats() { return plats; },
+  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, anim: { get phase() { return JA.phase; }, get key() { return JA.V ? JA.V.key : ''; }, get variant() { const V = JA.V; return V ? { key: V.key, dust: V.dust, pose: V.pose, crouch: V.crouch, stretch: V.stretch, tuck: V.tuck, lean: V.lean, tuckV: V.tuckV } : null; }, get extra() { return JA.ex ? Object.assign({}, JA.ex) : null; }, get jumps() { return JA.jumps; }, get keys() { return JA.keys.slice(); }, get extras() { return JA.extras.slice(); }, get flips() { return JA.flips; }, get cut() { return JA.cut; }, get fx() { return JA.fx.length; }, screen() { return { x: (P.x - cam.x) * SCALE, y: (P.y - cam.y + VIEW_H * 0.5 - 60) * SCALE, s: SCALE }; } }, get player() { return P; }, get plats() { return plats; },
   audio: { get volume() { return volume; }, set volume(v) { setVolume(v); }, get muted() { return muted; }, toggleMute,
     get masterTarget() { return master ? masterLevel() : null; }, get masterGain() { return master ? master.gain.value : null; },
     get music() { return Music.playing; }, get ctxState() { return AC ? AC.state : null; },
