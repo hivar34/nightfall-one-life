@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0820">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Nightfall: One Life</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#05040f;
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;overscroll-behavior:none;}
+  canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;touch-action:none;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.1</div>
+<script>
+(() => {
+'use strict';
+// ================= SETUP =================
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, SCALE = 1, VIEW_W = 600, VIEW_H = 520;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  SCALE = Math.min(W / 600, H / 520);
+  VIEW_W = W / SCALE; VIEW_H = H / SCALE;
+  makeBackdrop();
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+
+// ================= CONSTANTS =================
+const G = 2400, JUMP_V = 820, HOLD_G = 0.4, HOLD_MAX = 0.25;
+const PW = 28, PH = 40;           // player size (world units)
+const COYOTE = 0.08, BUFFER = 0.12;
+const DT = 1 / 120;
+const CAPS = ['KEEP GOING', "DON'T FALL", 'NO CHECKPOINT', 'KEEP GOING', 'ONE LIFE', "DON'T FALL"];
+
+// precompute reach (full-hold jump) for a given speed and height gain (dyUp>0 = higher)
+function reach(vx, dyUp) {
+  let y = 0, vy = -JUMP_V, t = 0, hold = 0;
+  for (let i = 0; i < 400; i++) {
+    const g = hold < HOLD_MAX ? G * HOLD_G : G;
+    hold += DT; vy += g * DT; y += vy * DT; t += DT;
+    if (vy > 0 && y >= -dyUp) return vx * t;
+  }
+  return 0;
+}
+const APEX = (() => { let y = 0, vy = -JUMP_V, h = 0, m = 0; while (vy < 0) { const g = h < HOLD_MAX ? G * HOLD_G : G; h += DT; vy += g * DT; y += vy * DT; m = Math.min(m, y); } return -m; })();
+
+// ================= STATE =================
+let state = 'menu'; // menu | play | dead
+let best = 0;
+try { best = parseInt(localStorage.getItem('nightfall_best') || '0', 10) || 0; } catch (e) {}
+let muted = false;
+try { muted = localStorage.getItem('nightfall_muted') === '1'; } catch (e) {}
+let P, plats, parts, cam, caption, shake, score, time, deadT, nearMiss, lastClutch, capIdx, newBestShown, almostShown, deathReason, flash;
+const demo = /[?&]demo=1/.test(location.search);
+
+function rand(a, b) { return a + Math.random() * (b - a); }
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+function reset() {
+  P = { x: 60, y: 0, vy: 0, ground: null, coyote: 0, buffer: 0, holding: false, holdT: 0, jumping: false,
+        squash: 1, run: 0, stunned: false, alive: true, trail: [] };
+  plats = []; parts = [];
+  cam = { x: 0, y: -120, ty: -120 };
+  caption = null; shake = 0; score = 0; time = 0; deadT = 0; nearMiss = false; lastClutch = false;
+  capIdx = 0; newBestShown = false; almostShown = false; deathReason = ''; flash = 0;
+  // starting platform (wide, safe-looking)
+  plats.push(mkPlat(-200, 0, 520, 0, false));
+  while (plats[plats.length - 1].bx < 2500) genNext();
+  P.ground = plats[0]; P.y = 0;
+}
+
+let platCounter = 0;
+function mkPlat(x, y, w, idx, plank) {
+  return { id: platCounter++, bx: x, by: y, x, y, w, h: plank ? 16 : 120, plank, ax: 0, ay: 0, ph: rand(0, 6.28), sp: 0,
+           idx, landed: false, lastX: x, lastY: y, hue: Math.random(), crossed: false };
+}
+function difficulty(idx) { return clamp(idx / 110, 0, 1); }
+function speedAt(idx) { return 330 + 230 * difficulty(idx); }
+
+function genNext() {
+  const prev = plats[plats.length - 1];
+  const idx = prev.idx + 1;
+  const d = difficulty(idx);
+  const vx = speedAt(idx) * 1.0;
+  // width: wide -> narrow planks
+  let w = rand(lerp(220, 90, d), lerp(320, 150, d));
+  let plank = false;
+  if (idx > 25 && Math.random() < 0.15 + 0.35 * d) { plank = true; w = rand(lerp(110, 60, d), lerp(160, 90, d)); }
+  // rest platform every 30 (a "SAFE" spot but no checkpoint!)
+  const rest = idx % 30 === 0;
+  if (rest) { w = 300; plank = false; }
+  // height change
+  const maxUp = APEX * (0.25 + 0.3 * d);
+  let dy = rand(-maxUp, 40 + 110 * d); // negative = higher (canvas y down)
+  let ny = clamp(prev.by + dy, -220, 160);
+  // movement
+  let ax = 0, ay = 0, sp = 0;
+  if (!rest && idx > 12 && Math.random() < 0.1 + 0.4 * d) {
+    sp = rand(1.2, 1.8 + 1.2 * d);
+    if (Math.random() < 0.5) ax = rand(30, 50 + 60 * d); else ay = rand(30, 40 + 50 * d);
+  }
+  // highest position target can be in (worst case for reaching)
+  const topWorst = ny - ay;
+  const prevTop = prev.by + prev.ay; // worst case: prev at its lowest when we take off
+  const dyUp = prevTop - topWorst;
+  const r = reach(speedAt(prev.idx), dyUp);
+  const maxGap = Math.max(50, r * 0.86 - prev.ax - ax);
+  const lo = Math.min(maxGap, lerp(60, 120, d)), hi = maxGap * (0.5 + 0.45 * d);
+  let gap = rand(lo, Math.max(lo, hi));
+  if (idx < 4) gap = rand(70, 110);
+  const p = mkPlat(prev.bx + prev.w + gap, ny, w, idx, plank);
+  p.ax = ax; p.ay = ay; p.sp = sp; p.rest = rest;
+  plats.push(p);
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ================= AUDIO =================
+let AC = null, master = null;
+function initAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain(); master.gain.value = muted ? 0 : 0.5; master.connect(AC.destination);
+  } catch (e) { AC = null; }
+}
+function tone(f0, f1, dur, type = 'square', vol = 0.3, delay = 0) {
+  if (!AC || muted) return;
+  const t = AC.currentTime + delay;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+}
+let noiseBuf = null;
+function noise(dur, vol = 0.3, freq = 800, delay = 0) {
+  if (!AC || muted) return;
+  if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const t = AC.currentTime + delay;
+  const s = AC.createBufferSource(); s.buffer = noiseBuf;
+  const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(freq, t);
+  const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur + 0.02);
+}
+const SFX = {
+  jump() { tone(260, 620, 0.14, 'square', 0.12); },
+  land(h) { noise(0.12, 0.25 + h * 0.2, 500); tone(120, 60, 0.1, 'sine', 0.25); },
+  clutch() { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.12, 'square', 0.1, i * 0.06)); },
+  safe() { tone(660, 880, 0.18, 'triangle', 0.18); },
+  milestone() { tone(880, 880, 0.07, 'square', 0.08); tone(1320, 1320, 0.1, 'square', 0.08, 0.08); },
+  close() { tone(400, 300, 0.25, 'sawtooth', 0.1); },
+  die() { tone(440, 50, 0.7, 'sawtooth', 0.18); noise(0.5, 0.3, 300, 0.05); },
+  start() { tone(220, 440, 0.2, 'square', 0.1); tone(330, 660, 0.25, 'square', 0.08, 0.1); },
+  best() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, f, 0.15, 'triangle', 0.15, i * 0.08)); },
+};
+
+// ================= INPUT =================
+let pressed = false, lastAction = 0;
+function press(e) {
+  initAudio();
+  if (pressed) return; pressed = true;
+  const now = performance.now();
+  if (state === 'menu') { start(); return; }
+  if (state === 'dead') { if (deadT > 0.45) start(); return; }
+  P.buffer = BUFFER; P.holding = true;
+}
+function release() { pressed = false; if (P) P.holding = false; }
+function start() { reset(); state = 'play'; showCaption(['NO CHECKPOINT.', 'ONE LIFE.'], '#ffd23f', 2.2); SFX.start(); pressed = true; P.holding = false; }
+function toggleMute() {
+  muted = !muted; try { localStorage.setItem('nightfall_muted', muted ? '1' : '0'); } catch (e) {}
+  if (master) master.gain.value = muted ? 0 : 0.5;
+}
+function inMuteBtn(cx, cy) { return cx > W - 56 && cy < 56; }
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); if (!e.repeat) press(); }
+  else if (e.code === 'KeyM') toggleMute();
+});
+window.addEventListener('keyup', e => { if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); release(); } });
+cv.addEventListener('pointerdown', e => { e.preventDefault(); if (inMuteBtn(e.clientX, e.clientY)) { initAudio(); toggleMute(); return; } press(); });
+window.addEventListener('pointerup', release);
+window.addEventListener('pointercancel', release);
+window.addEventListener('blur', release);
+['touchstart', 'touchmove', 'touchend', 'gesturestart', 'dblclick', 'contextmenu'].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+
+// ================= CAPTIONS & FX =================
+function showCaption(lines, color = '#ffd23f', dur = 1.1, big = 1) {
+  caption = { lines: Array.isArray(lines) ? lines : [lines], color, t: 0, dur, big, rot: rand(-0.06, 0.06) };
+}
+function burst(x, y, n, colors, spd = 200, up = 1, life = 0.6, size = 5) {
+  for (let i = 0; i < n; i++) {
+    const a = up ? rand(Math.PI * 1.05, Math.PI * 1.95) : rand(0, Math.PI * 2);
+    const s = rand(spd * 0.3, spd);
+    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(life * 0.5, life), max: life,
+      c: colors[(Math.random() * colors.length) | 0], s: rand(size * 0.5, size), g: 900 });
+  }
+}
+
+// ================= UPDATE =================
+function step(dt) {
+  time += dt;
+  if (caption) { caption.t += dt; if (caption.t > caption.dur) caption = null; }
+  shake = Math.max(0, shake - dt * 30);
+  flash = Math.max(0, flash - dt * 3);
+  // particles
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; }
+    p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985;
+  }
+  if (state === 'menu') return;
+  // platforms
+  for (const pl of plats) {
+    pl.lastX = pl.x; pl.lastY = pl.y;
+    pl.x = pl.bx + Math.sin(pl.ph + time * pl.sp) * pl.ax;
+    pl.y = pl.by + Math.sin(pl.ph + time * pl.sp) * pl.ay;
+  }
+  if (state === 'dead') { deadT += dt; P.vy += G * dt; P.y += P.vy * dt; return; }
+
+  const idxNow = P.ground ? P.ground.idx : (lastIdx() || 0);
+  const vx = P.stunned ? 0 : speedAt(idxNow);
+  if (demo) demoBot();
+
+  // ride platform
+  if (P.ground) {
+    P.x += P.ground.x - P.ground.lastX;
+    P.y = P.ground.y;
+    if (P.x - PW / 2 > P.ground.x + P.ground.w) { P.ground = null; P.coyote = COYOTE; }
+  }
+  P.buffer -= dt;
+  if (!P.ground) P.coyote -= dt;
+  // jump
+  if (P.buffer > 0 && (P.ground || P.coyote > 0) && !P.stunned) {
+    P.vy = -JUMP_V; P.ground = null; P.coyote = 0; P.buffer = 0; P.jumping = true; P.holdT = 0;
+    P.squash = 0.7; SFX.jump();
+    burst(P.x, P.y, 8, ['#ffffff', '#ffd23f', '#9b8cff'], 150, 1, 0.4, 4);
+  }
+  const prevX = P.x, prevY = P.y;
+  P.x += vx * dt;
+  if (!P.ground) {
+    let g = G;
+    if (P.jumping && P.holding && P.holdT < HOLD_MAX && P.vy < 0) { g = G * HOLD_G; P.holdT += dt; }
+    if (P.vy >= 0) P.jumping = false;
+    P.vy += g * dt; P.vy = Math.min(P.vy, 1600);
+    P.y += P.vy * dt;
+    // collisions
+    for (const pl of plats) {
+      if (pl.x > P.x + 400) break;
+      const l = pl.x, r = pl.x + pl.w;
+      const pl0 = P.x - PW / 2, pr0 = P.x + PW / 2;
+      if (pr0 <= l || pl0 >= r) {
+        // near miss tracking: passing below top in front of platform
+        if (!pl.crossed && prevY <= pl.y && P.y > pl.y && pr0 <= l && l - pr0 < 34 && !pl.landed) { nearMiss = true; pl.crossed = true; }
+        continue;
+      }
+      const prevTop = prevY - (pl.y - pl.lastY);
+      if (P.vy >= 0 && prevTop <= pl.y + 2 && P.y >= pl.y) {
+        land(pl); break;
+      } else if (P.y > pl.y + 4 && P.y - PH < pl.y + pl.h && prevX + PW / 2 <= pl.lastX + 2) {
+        // bonk into side
+        P.x = pl.x - PW / 2 - 0.5; P.stunned = true; nearMiss = true; shake = 6;
+        SFX.close(); burst(P.x + PW / 2, P.y - PH / 2, 10, ['#ffd23f', '#ffffff'], 200, 0, 0.5, 4);
+      }
+    }
+  }
+  // squash recover / run anim
+  P.squash += (1 - P.squash) * Math.min(1, dt * 14);
+  if (P.ground) P.run += dt * vx / 22;
+  // trail
+  P.trail.push({ x: P.x, y: P.y - PH / 2 }); if (P.trail.length > 14) P.trail.shift();
+  // camera
+  if (P.ground) cam.ty = P.ground.y - 130;
+  if (P.y > cam.ty + 300) cam.ty = P.y - 300;
+  cam.y += (cam.ty - cam.y) * Math.min(1, dt * 4);
+  cam.x = P.x - VIEW_W * 0.24;
+  // generation / cleanup
+  while (plats[plats.length - 1].x < cam.x + VIEW_W + 1500) genNext();
+  while (plats.length > 3 && plats[0].x + plats[0].w + plats[0].ax < cam.x - 300) plats.shift();
+  // death
+  const lowest = Math.max(...plats.slice(0, 6).map(p => p.y + p.ay));
+  if (P.y > lowest + 520 || P.y > cam.y + VIEW_H * 0.75 + 200) die();
+}
+function lastIdx() { let m = 0; for (const p of plats) if (p.landed) m = Math.max(m, p.idx); return m; }
+
+function land(pl) {
+  const impact = clamp(P.vy / 1400, 0, 1);
+  P.y = pl.y; P.vy = 0; P.ground = pl; P.jumping = false; P.squash = 1.35 + impact * 0.2; P.coyote = 0;
+  const overlap = Math.min(P.x + PW / 2, pl.x + pl.w) - Math.max(P.x - PW / 2, pl.x);
+  const clutch = overlap < PW * 0.6 && !pl.landed && pl.idx > 0;
+  shake = Math.max(shake, 4 + impact * 8 + (clutch ? 8 : 0));
+  SFX.land(impact);
+  burst(P.x, P.y, 10 + (impact * 10 | 0), ['#c9c3ff', '#ffffff', '#7a6bd6'], 220, 1, 0.45, 5);
+  if (!pl.landed) {
+    pl.landed = true;
+    score = Math.max(score, pl.idx);
+    if (clutch) {
+      showCaption('CLUTCH!', '#ffd23f', 1.0, 1.3); SFX.clutch(); flash = 0.6; lastClutch = true;
+      burst(P.x, P.y, 26, ['#ffd23f', '#ff9f1c', '#ffffff'], 380, 1, 0.8, 6);
+    } else if (best > 5 && score === best + 1 && !newBestShown) {
+      newBestShown = true; showCaption('NEW BEST!', '#5dffb0', 1.4, 1.2); SFX.best();
+      burst(P.x, P.y - 40, 30, ['#5dffb0', '#ffd23f', '#ffffff'], 420, 0, 1, 6);
+    } else if (best > 8 && score === best - 3 && !almostShown) {
+      almostShown = true; showCaption('ALMOST...', '#ff7ad9', 1.2);
+    } else if (lastClutch || pl.rest) {
+      showCaption('SAFE', '#5dffb0', 0.8); SFX.safe(); lastClutch = false;
+    } else if (score % 10 === 0) {
+      showCaption(CAPS[capIdx++ % CAPS.length], '#ffffff', 1.0); SFX.milestone();
+    }
+  }
+}
+
+function die() {
+  if (state !== 'play') return;
+  state = 'dead'; deadT = 0; P.alive = false;
+  shake = 14; SFX.die();
+  burst(P.x, Math.min(P.y, cam.y + VIEW_H * 0.6), 30, ['#ffd23f', '#9b8cff', '#ffffff'], 400, 0, 0.9, 6);
+  const isBest = score > best;
+  if (isBest) { best = score; try { localStorage.setItem('nightfall_best', String(best)); } catch (e) {} }
+  if (nearMiss) showCaption('SO CLOSE', '#ff5d7a', 1.6, 1.1);
+  if (navigator.vibrate) try { navigator.vibrate(120); } catch (e) {}
+}
+
+// Demo autopilot (?demo=1) for testing / screenshots
+function demoBot() {
+  if (P.ground) {
+    const edge = P.ground.x + P.ground.w;
+    if (P.x + PW * 0.3 > edge - speedAt(P.ground.idx) * 0.03) { P.buffer = BUFFER; P.holding = true; }
+  } else if (P.vy > -200) P.holding = false;
+}
+
+// ================= RENDER =================
+let backdrop = null, stars = [], city = [];
+function makeBackdrop() {
+  stars = [];
+  for (let i = 0; i < 160; i++) stars.push({ x: Math.random(), y: Math.random() * 0.75, s: Math.random() * 1.6 + 0.3, tw: Math.random() * 6 });
+  city = [];
+  let x = 0; while (x < 2400) { const w = rand(40, 110); city.push({ id: city.length, x, w, h: rand(60, 220), win: Math.random() }); x += w + rand(4, 30); }
+}
+function winHash(a, i, j) { let h = (a * 374761393 + i * 668265263 + j * 2147483647) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
+function drawBG() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#05041a'); g.addColorStop(0.45, '#1a1046'); g.addColorStop(0.78, '#3b1a5e'); g.addColorStop(1, '#0a0614');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // stars
+  for (const s of stars) {
+    const a = 0.5 + 0.5 * Math.sin(time * 2 + s.tw);
+    ctx.fillStyle = `rgba(255,255,255,${0.3 + a * 0.6})`;
+    const sx = ((s.x * W - (cam ? cam.x * SCALE * 0.02 : 0)) % W + W) % W;
+    ctx.fillRect(sx, s.y * H, s.s, s.s);
+  }
+  // moon
+  const mx = W * 0.78, my = H * 0.17, mr = Math.min(W, H) * 0.07;
+  const mg = ctx.createRadialGradient(mx, my, mr * 0.5, mx, my, mr * 3.2);
+  mg.addColorStop(0, 'rgba(255,230,140,0.35)'); mg.addColorStop(1, 'rgba(255,230,140,0)');
+  ctx.fillStyle = mg; ctx.fillRect(mx - mr * 4, my - mr * 4, mr * 8, mr * 8);
+  ctx.fillStyle = '#ffe9a8'; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2); // blocky moon
+  ctx.fillStyle = '#f0d67e'; ctx.fillRect(mx - mr * 0.5, my - mr * 0.4, mr * 0.45, mr * 0.45); ctx.fillRect(mx + mr * 0.3, my + mr * 0.25, mr * 0.35, mr * 0.35);
+  // distant blocky skyline (parallax)
+  const cx = cam ? cam.x : 0, cy = cam ? cam.y : 0;
+  for (let layer = 0; layer < 2; layer++) {
+    const par = layer ? 0.25 : 0.12, sc = SCALE * (layer ? 1 : 0.7);
+    const base = H * (layer ? 0.86 : 0.8) - (cy + 120) * SCALE * par * 0.5;
+    ctx.fillStyle = layer ? '#140b2e' : '#21134a';
+    const total = 2400 * sc;
+    const off = ((cx * SCALE * par) % total + total) % total;
+    for (let k = 0; k < 3; k++) for (const b of city) {
+      const bx = b.x * sc - off + k * total;
+      if (bx > W || bx + b.w * sc < 0) continue;
+      ctx.fillRect(bx, base - b.h * sc, b.w * sc, H);
+      if (layer && b.win > 0.25) { ctx.fillStyle = 'rgba(255,210,63,0.75)';
+        // stable lights: on/off decided per building + window index (not screen position)
+        const top = base - b.h * sc, rows = Math.max(0, Math.floor((b.h * sc - 20 * sc) / (22 * sc))), cols = Math.max(0, Math.floor((b.w * sc - 18 * sc) / (18 * sc)) + 1);
+        for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+          if (winHash(b.id, i, j) < 0.35) ctx.fillRect(Math.round(bx + 8 * sc + i * 18 * sc), Math.round(top + 10 * sc + j * 22 * sc), Math.round(6 * sc), Math.round(8 * sc));
+        }
+        ctx.fillStyle = '#140b2e'; }
+    }
+  }
+  // void fog glow at bottom
+  const fg = ctx.createLinearGradient(0, H * 0.7, 0, H);
+  fg.addColorStop(0, 'rgba(120,60,200,0)'); fg.addColorStop(1, 'rgba(120,60,200,0.35)');
+  ctx.fillStyle = fg; ctx.fillRect(0, H * 0.7, W, H * 0.3);
+}
+
+function drawPlat(pl) {
+  const x = pl.x, y = pl.y, w = pl.w, h = pl.h;
+  if (pl.plank) {
+    ctx.fillStyle = '#6b4424'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#8a5a30'; ctx.fillRect(x, y, w, 5);
+    ctx.fillStyle = '#4a2e17';
+    for (let i = 24; i < w; i += 26) ctx.fillRect(x + i, y + 2, 2, h - 2);
+    ctx.fillStyle = '#3a2412'; ctx.fillRect(x + 6, y + h, 4, 10); ctx.fillRect(x + w - 10, y + h, 4, 10);
+  } else {
+    // block body with fade into void
+    const bg = ctx.createLinearGradient(0, y, 0, y + h);
+    bg.addColorStop(0, pl.rest ? '#2c5a4a' : '#3a3470'); bg.addColorStop(1, 'rgba(20,14,50,0)');
+    ctx.fillStyle = bg; ctx.fillRect(x, y, w, h);
+    // top slab
+    ctx.fillStyle = pl.rest ? '#4fbf8f' : (pl.ax || pl.ay ? '#7d5cff' : '#5b54b8'); ctx.fillRect(x, y, w, 18);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x, y, w, 4);
+    // studs
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    for (let i = 10; i < w - 10; i += 22) ctx.fillRect(x + i, y - 4, 12, 4);
+    // block seams
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    for (let i = 40; i < w; i += 40) ctx.fillRect(x + i, y + 18, 2, 50);
+  }
+  // neon edge
+  ctx.fillStyle = pl.landed ? 'rgba(255,210,63,0.9)' : 'rgba(255,210,63,0.55)';
+  ctx.fillRect(x, y - 1, 3, pl.plank ? h : 18); ctx.fillRect(x + w - 3, y - 1, 3, pl.plank ? h : 18);
+  if (pl.ax || pl.ay) { // movement hint arrows
+    ctx.fillStyle = 'rgba(255,210,63,0.7)'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(pl.ax ? '◀ ▶' : '▲▼', x + w / 2, y + (pl.plank ? 32 : 40));
+  }
+}
+
+function drawPlayer() {
+  const sq = P.squash;
+  const fw = clamp(PW * sq, PW * 0.7, PW * 1.5), fh = clamp(PH / sq, PH * 0.7, PH * 1.4);
+  const x = P.x, y = P.y;
+  ctx.save();
+  ctx.translate(x, y);
+  const tilt = P.ground ? 0 : clamp(P.vy / 3000, -0.15, 0.25);
+  ctx.rotate(P.stunned ? -0.4 : tilt);
+  const k = fh / PH, kw = fw / PW;
+  ctx.scale(kw, k);
+  const sw = Math.sin(P.run) * (P.ground ? 1 : 0.2);
+  const air = !P.ground;
+  // legs (green)
+  ctx.fillStyle = '#3fae49';
+  ctx.save(); ctx.translate(-6, -14); ctx.rotate(air ? -0.5 : sw * 0.7); ctx.fillRect(-4, 0, 8, 14); ctx.restore();
+  ctx.save(); ctx.translate(6, -14); ctx.rotate(air ? 0.4 : -sw * 0.7); ctx.fillRect(-4, 0, 8, 14); ctx.restore();
+  // torso (blue)
+  ctx.fillStyle = '#1f6fe0'; ctx.fillRect(-10, -30, 20, 17);
+  // arms (yellow)
+  ctx.fillStyle = '#f5cd30';
+  ctx.save(); ctx.translate(-12, -29); ctx.rotate(air ? -2.4 : -sw * 0.8); ctx.fillRect(-3, 0, 6, 14); ctx.restore();
+  ctx.save(); ctx.translate(12, -29); ctx.rotate(air ? 2.4 : sw * 0.8); ctx.fillRect(-3, 0, 6, 14); ctx.restore();
+  // head
+  ctx.fillStyle = '#f5cd30'; ctx.fillRect(-8, -42, 16, 13);
+  ctx.fillStyle = '#111'; ctx.fillRect(1, -38, 3, 3); ctx.fillRect(5, -38, 2, 3);
+  ctx.fillRect(1, -33, 6, 1.5);
+  ctx.restore();
+}
+
+function drawWorld() {
+  ctx.save();
+  let sx = 0, sy = 0;
+  if (shake > 0) { sx = rand(-shake, shake); sy = rand(-shake, shake); }
+  ctx.translate(sx * DPR * 0.6, sy * DPR * 0.6);
+  ctx.scale(SCALE * DPR, SCALE * DPR);
+  ctx.translate(-cam.x, -cam.y + VIEW_H * 0.5 - 60);
+  for (const pl of plats) if (pl.x < cam.x + VIEW_W + 50 && pl.x + pl.w > cam.x - 50) drawPlat(pl);
+  // trail
+  for (let i = 0; i < P.trail.length; i++) {
+    const t = P.trail[i], a = i / P.trail.length;
+    ctx.fillStyle = `rgba(255,210,63,${a * 0.25})`; ctx.fillRect(t.x - 8 * a, t.y - 8 * a, 16 * a, 16 * a);
+  }
+  if (state !== 'dead' || deadT < 1.5) drawPlayer();
+  for (const p of parts) { ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.c; ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s); }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function outlined(text, x, y, size, color, align = 'center', stroke = 0.16) {
+  ctx.font = `900 ${size}px "Arial Black", Impact, system-ui, sans-serif`;
+  ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round'; ctx.lineWidth = size * stroke; ctx.strokeStyle = '#000';
+  ctx.strokeText(text, x, y); ctx.fillStyle = color; ctx.fillText(text, x, y);
+}
+
+function drawUI() {
+  const u = Math.min(W, H) / 100 * DPR; // ui unit
+  const cw = W * DPR, ch = H * DPR;
+  if (flash > 0) { ctx.fillStyle = `rgba(255,210,63,${flash * 0.18})`; ctx.fillRect(0, 0, cw, ch); }
+  // mute icon
+  ctx.globalAlpha = 0.7; outlined(muted ? '🔇' : '🔊', cw - 28 * DPR, 28 * DPR, 22 * DPR, '#fff'); ctx.globalAlpha = 1;
+  if (state === 'menu') {
+    ctx.fillStyle = 'rgba(5,4,20,0.45)'; ctx.fillRect(0, 0, cw, ch);
+    const ts = Math.min(cw / 9, u * 13);
+    outlined('NIGHTFALL', cw / 2, ch * 0.3, ts, '#ffd23f');
+    outlined('ONE LIFE', cw / 2, ch * 0.3 + ts * 1.05, ts * 0.7, '#ffffff');
+    const p = 0.6 + 0.4 * Math.sin(time * 5);
+    ctx.globalAlpha = p; outlined(isTouch ? 'TAP TO START' : 'SPACE / CLICK TO START', cw / 2, ch * 0.62, Math.min(cw / 16, u * 6), '#ffffff'); ctx.globalAlpha = 1;
+    outlined('HOLD = HIGHER JUMP · NO CHECKPOINTS', cw / 2, ch * 0.62 + u * 8, Math.min(cw / 30, u * 3.4), '#c9c3ff', 'center', 0.12);
+    if (best > 0) outlined('BEST ' + best, cw / 2, ch * 0.62 + u * 15, u * 4.5, '#ffd23f');
+    return;
+  }
+  // score
+  outlined(String(score), cw / 2, u * 10, u * 10, '#ffffff');
+  outlined('BEST ' + Math.max(best, score), 16 * DPR, 28 * DPR, u * 3.6, '#ffd23f', 'left', 0.14);
+  // caption
+  if (caption) {
+    const t = caption.t, d = caption.dur;
+    const pop = t < 0.12 ? 0.3 + (t / 0.12) * 0.9 : t < 0.22 ? 1.2 - (t - 0.12) / 0.1 * 0.2 : 1;
+    const a = t > d - 0.25 ? clamp((d - t) / 0.25, 0, 1) : 1;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.translate(cw / 2, ch * 0.32); ctx.rotate(caption.rot); ctx.scale(pop, pop);
+    const n = caption.lines.length;
+    let size = u * 11 * caption.big;
+    ctx.font = `900 ${size}px "Arial Black", Impact, sans-serif`;
+    const maxW = Math.max(...caption.lines.map(l => ctx.measureText(l).width));
+    if (maxW > cw * 0.9) size *= cw * 0.9 / maxW;
+    caption.lines.forEach((l, i) => outlined(l, 0, (i - (n - 1) / 2) * size * 1.1, size, i === 1 ? '#ffffff' : caption.color, 'center', 0.18));
+    ctx.restore();
+  }
+  if (state === 'dead' && deadT > 0.35) {
+    const a = clamp((deadT - 0.35) / 0.3, 0, 1);
+    ctx.fillStyle = `rgba(5,4,20,${a * 0.6})`; ctx.fillRect(0, 0, cw, ch);
+    ctx.globalAlpha = a;
+    const ts = Math.min(cw / 6.5, u * 15);
+    outlined('YOU FELL', cw / 2, ch * 0.42, ts, '#ff5d7a');
+    outlined('SCORE ' + score, cw / 2, ch * 0.42 + ts * 0.95, ts * 0.42, '#ffffff');
+    outlined((score >= best && score > 0 ? 'NEW BEST ' : 'BEST ') + best, cw / 2, ch * 0.42 + ts * 1.45, ts * 0.32, '#ffd23f');
+    if (deadT > 0.45) { ctx.globalAlpha = a * (0.6 + 0.4 * Math.sin(time * 6));
+      outlined(isTouch ? 'TAP TO RETRY' : 'SPACE / CLICK TO RETRY', cw / 2, ch * 0.42 + ts * 2.1, Math.min(cw / 16, u * 5.5), '#ffffff'); }
+    ctx.globalAlpha = 1;
+  }
+}
+const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+// ================= LOOP =================
+let last = performance.now(), acc = 0;
+function frame(now) {
+  let dt = (now - last) / 1000; last = now;
+  if (dt > 0.1) dt = 0.1;
+  acc += dt;
+  while (acc >= DT) { step(DT); acc -= DT; }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawBG();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  drawWorld();
+  drawUI();
+  requestAnimationFrame(frame);
+}
+resize();
+reset();
+if (demo) { state = 'play'; showCaption(['NO CHECKPOINT.', 'ONE LIFE.'], '#ffd23f', 2.2); }
+window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; }, start, press, release };
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
