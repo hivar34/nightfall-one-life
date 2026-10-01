@@ -97,7 +97,7 @@ const COYOTE = 0.08, BUFFER = 0.12;
 const DT = 1 / 120;
 const CAPS = ['KEEP GOING', "DON'T FALL", 'NO CHECKPOINT', 'KEEP GOING', 'ONE LIFE', "DON'T FALL"];
 const CAPS_CP = ['KEEP GOING', "DON'T FALL", 'FASTER!', 'KEEP GOING', 'STAY SHARP', "DON'T FALL"]; // used once a checkpoint exists
-const CHECKPOINTS = [30, 45];     // platform idx that become checkpoints (per-run session, not persisted)
+const CHECKPOINTS = [30, 60];     // platform idx that become checkpoints (per-run session, not persisted)
 
 // precompute reach (full-hold jump) for a given speed and height gain (dyUp>0 = higher)
 function reach(vx, dyUp) {
@@ -167,7 +167,7 @@ function genNext() {
   let w = rand(lerp(220, 90, d), lerp(320, 150, d));
   let plank = false;
   if (idx > 25 && Math.random() < 0.15 + 0.35 * d) { plank = true; w = rand(lerp(110, 60, d), lerp(160, 90, d)); }
-  // rest platform every 30 (a "SAFE" spot); checkpoints at 30 and 45 are rest platforms too
+  // rest platform every 30 (a "SAFE" spot); checkpoints at 30 and 60 are rest platforms too
   const isCp = CHECKPOINTS.includes(idx);
   const rest = idx % 30 === 0 || isCp;
   if (rest) { w = 300; plank = false; }
@@ -1029,7 +1029,7 @@ function drawUI() {
     outlined('ONE LIFE', cw / 2, ch * 0.3 + ts * 1.05, ts * 0.7, '#ffffff');
     const p = 0.6 + 0.4 * Math.sin(time * 5);
     ctx.globalAlpha = p; outlined(isTouch ? 'TAP TO START' : 'SPACE / CLICK TO START', cw / 2, ch * 0.62, Math.min(cw / 16, u * 6), '#ffffff'); ctx.globalAlpha = 1;
-    outlined('HOLD = HIGHER JUMP · CHECKPOINTS AT 30 & 45', cw / 2, ch * 0.62 + u * 8, Math.min(cw / 30, u * 3.4), '#c9c3ff', 'center', 0.12);
+    outlined('HOLD = HIGHER JUMP · CHECKPOINTS AT 30 & 60', cw / 2, ch * 0.62 + u * 8, Math.min(cw / 30, u * 3.4), '#c9c3ff', 'center', 0.12);
     if (best > 0) outlined('BEST ' + best, cw / 2, ch * 0.62 + u * 15, u * 4.5, '#ffd23f');
     return;
   }
