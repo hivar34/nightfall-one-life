@@ -172,7 +172,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.8</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.9</div>
 <div id="sbToast" style="position:fixed;left:50%;bottom:44px;transform:translateX(-50%);padding:6px 12px;border-radius:8px;background:rgba(20,10,40,0.82);color:#ff8fb8;font:700 13px system-ui,sans-serif;letter-spacing:0.04em;pointer-events:none;user-select:none;z-index:6;opacity:0;transition:opacity .3s"></div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button><button id="shopBtn" class="mbtn" type="button" tabindex="-1" title="Skin shop (K)" aria-label="Skin shop"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="3.5" y="0.5" width="3" height="2.5"/><rect x="2.5" y="3.2" width="5" height="3"/><rect x="1" y="3.4" width="1.3" height="2.6"/><rect x="7.7" y="3.4" width="1.3" height="2.6"/><rect x="3" y="6.4" width="1.6" height="3.1"/><rect x="5.4" y="6.4" width="1.6" height="3.1"/></svg></button></div>
@@ -1281,7 +1281,7 @@ const SKINS = [
 ];
 function skinById(id) { return SKINS.find(k => k.id === (id | 0)) || SKINS[0]; }
 // body in runner-local units (feet at 0,0; 40 tall); sw = run swing, air = airborne pose, t = time (for animated skins)
-function drawRunner(c, sk, sw, air, t, silhouette, po) { // po (v0.8.7, optional): { l1, l2, a1, a2, lk, cape } limb angles for the jump animation
+function drawRunner(c, sk, sw, air, t, silhouette, po) { // po (v0.8.7, optional): { l1, l2, a1, a2, lk, cape, ak } limb angles for the jump animation (ak v0.8.9: arm length factor)
   const col = v => silhouette || v;
   if (sk.glow && !silhouette) { const g = c.createRadialGradient(0, -22, 4, 0, -22, 36); g.addColorStop(0, `rgba(${sk.glow},0.32)`); g.addColorStop(1, `rgba(${sk.glow},0)`);
     c.fillStyle = g; c.fillRect(-36, -58, 72, 72); }
@@ -1293,8 +1293,9 @@ function drawRunner(c, sk, sw, air, t, silhouette, po) { // po (v0.8.7, optional
   c.fillStyle = col(sk.aurora ? `hsl(${(t * 50) % 360},90%,62%)` : sk.torso); c.fillRect(-10, -30, 20, 17);
   if (sk.cape && !silhouette) { c.fillStyle = '#ffd23f'; c.fillRect(-10, -30, 20, 2); c.fillRect(-1, -28, 2, 15); }
   c.fillStyle = col(sk.arms);
-  c.save(); c.translate(-12, -29); c.rotate(po ? po.a1 : air ? -2.4 : -sw * 0.8); c.fillRect(-3, 0, 6, 14); c.restore();
-  c.save(); c.translate(12, -29); c.rotate(po ? po.a2 : air ? 2.4 : sw * 0.8); c.fillRect(-3, 0, 6, 14); c.restore();
+  const ah = po && po.ak ? 14 * po.ak : 14;
+  c.save(); c.translate(-12, -29); c.rotate(po ? po.a1 : air ? -2.4 : -sw * 0.8); c.fillRect(-3, 0, 6, ah); c.restore();
+  c.save(); c.translate(12, -29); c.rotate(po ? po.a2 : air ? 2.4 : sw * 0.8); c.fillRect(-3, 0, 6, ah); c.restore();
   c.fillStyle = col(sk.head); c.fillRect(-8, -42, 16, 13);
   if (!silhouette) { c.fillStyle = sk.eye; c.fillRect(1, -38, 3, 3); c.fillRect(5, -38, 2, 3); c.fillRect(1, -33, 6, 1.5); }
   c.fillStyle = col(sk.accC || '#000');
@@ -1375,7 +1376,7 @@ function skinIcon(id, locked) { // small pixel runner as a data URL (scoreboard 
 // Phases: takeoff crouch -> stretch while rising -> tuck at the apex (+ held-jump extra move) -> falling pose -> landing squash + dust.
 // v0.8.8: every jump rolls a visual variant set (jvRnd); two consecutive jumps never share the same set. Full-hold jumps get an extra move.
 const JA = { last: 0, wasG: true, prevVy: 0, airT: 9, landT: 9, jumped: false, big: false, flip: -1, spin: 0, maxVy: 0, phase: 'run', fx: [], seed: 7, flips: 0, cut: 0, sx: 0, sy: 0,
-  y0: 0, V: null, ex: null, tw: 1, jumps: 0, keys: [], extras: [] };
+  y0: 0, V: null, ex: null, tw: 1, jumps: 0, keys: [], extras: [], poses: [] };
 function jaRnd() { JA.seed = (JA.seed * 16807) % 2147483647; return JA.seed / 2147483647; }
 // separate visual-only PRNG for the variety (seeded without calling Math.random, so the game's random sequence is untouched)
 const JV = { s: 1 + ((() => { try { return crypto.getRandomValues(new Uint32Array(1))[0]; } catch (e) { return Date.now(); } })() % 2147483645) };
@@ -1388,40 +1389,44 @@ function jaPuff(x, y, n, dir, spd, size, col, life) { // dir: -1 left/back, 1 ri
     JA.fx.push({ x: x + d * (4 + r * 8), y: y - 1 - jaRnd() * 3, vx: d * spd * (0.45 + 0.55 * jaRnd()), vy: -spd * (0.08 + 0.22 * jaRnd()), r: size * (0.6 + 0.5 * r), t: 0, life: life * (0.75 + 0.4 * jaRnd()), c: col }); }
 }
 const jaEase = u => u * u * (3 - 2 * u);
-function lerpPose(A, B, u) { return { l1: lerp(A.l1, B.l1, u), l2: lerp(A.l2, B.l2, u), a1: lerp(A.a1, B.a1, u), a2: lerp(A.a2, B.a2, u), lk: lerp(A.lk, B.lk, u), cape: lerp(A.cape, B.cape, u) }; }
+function lerpPose(A, B, u) { return { l1: lerp(A.l1, B.l1, u), l2: lerp(A.l2, B.l2, u), a1: lerp(A.a1, B.a1, u), a2: lerp(A.a2, B.a2, u), lk: lerp(A.lk, B.lk, u), cape: lerp(A.cape, B.cape, u), ak: lerp(A.ak || 1, B.ak || 1, u) }; }
 const POSE = { // l1 back leg, l2 front leg, a1 back arm, a2 front arm (radians; negative swings forward), lk leg length factor
   crouch: { l1: 0.75, l2: -0.75, a1: 0.9, a2: 1.1, lk: 0.85, cape: 0.35 },
   rise:   { l1: 0.55, l2: -1.05, a1: -2.7, a2: 2.5, lk: 1, cape: 0.75 },
   tuck:   { l1: -1.45, l2: -1.6, a1: -1.25, a2: -0.95, lk: 0.72, cape: 1.1 },
   fall:   { l1: 0.3, l2: -0.4, a1: -2.0, a2: 1.9, lk: 1, cape: 0.95 },
   land:   { l1: 0.85, l2: -0.85, a1: 0.75, a2: -1.0, lk: 0.8, cape: 0.3 },
-  star:   { l1: 0.95, l2: -0.95, a1: -2.25, a2: 2.25, lk: 1.08, cape: 1.25 },   // held extra: star / spread
-  layout: { l1: 0.12, l2: -0.12, a1: -2.95, a2: 2.95, lk: 1.05, cape: 1.2 } };  // held extra: straight body for the twist
+  star:   { l1: 1.15, l2: -1.15, a1: 2.05, a2: -2.05, lk: 1.1, cape: 1.25, ak: 1.2 },     // held extra: star / spread
+  layout: { l1: 0.12, l2: -0.12, a1: -2.95, a2: 2.95, lk: 1.05, cape: 1.2 },   // held extra: straight body for the twist
+  aircr:  { l1: 0.88, l2: -0.88, a1: -1.15, a2: 1.0, lk: 0.8, cape: 1.05, ak: 1.65 } }; // v0.8.9 mid-air crouch: legs spread wide open, arms crossed over the chest
 function rollVariant() { // per-jump visual variant set; rerolled until it differs from the previous jump's set
   const prev = JA.V ? JA.V.key : '';
   let v, n = 0;
   do {
-    const r = jvRnd();
+    const ps = ['base', 'reach', 'split', 'crouch'].filter(q => !JA.V || q !== JA.V.pose); // never the same main style twice in a row
     v = { dust: jvRnd() >= 0.37,                                   // ~37% of jumps skip the take-off dust kick
-      pose: r < 0.55 ? 'base' : r < 0.78 ? 'reach' : 'split',      // occasional variant poses
+      pose: ps[(jvRnd() * ps.length) | 0],                          // main style: 25% each overall, 1/3 each of the 3 not used last time
       side: jvRnd() < 0.5 ? 1 : 2,                                  // which arm reaches
-      crouch: jvR(0.6, 1.25), cT: jvR(0.065, 0.1),                  // take-off squash depth, crouch duration (s)
+      cT: jvR(0.05, 0.08),                                          // length of the launch stretch section (s); no crouch at launch any more
       stretch: jvR(0.5, 1.5),                                       // rising stretch intensity
       tuck: jvR(0.45, 1.1), tlk: jvR(0.62, 0.9),                    // tuck depth (0=open, 1=full), knee height (leg length)
       tuckV: jvR(220, 440), fallV: jvR(190, 330),                   // pose timing offsets (|vy| where the tuck starts / ends)
       tRot: jvR(0.1, 0.5), lean: jvR(-0.1, 0.16),                   // apex forward tuck rotation, body lean (rad)
       da1: jvR(-0.4, 0.4), da2: jvR(-0.4, 0.4), dl1: jvR(-0.3, 0.3), dl2: jvR(-0.3, 0.3) }; // arm / leg angle offsets
-    v.key = [v.dust ? 'D' : 'n', v.pose[0], v.pose === 'reach' ? v.side : 0, jvB(v.tuck, 0.45, 1.1), jvB(v.stretch, 0.5, 1.5), jvB(v.lean, -0.1, 0.16), jvB(v.crouch, 0.6, 1.25)].join('');
+    if (v.pose === 'crouch') { v.tuckV = jvR(400, 540); v.spread = jvR(1.0, 1.25); v.cross = jvR(0.92, 1.08); v.tRot = jvR(0.05, 0.25); } // crouch starts mid-rise, peaks at the apex
+    v.key = [v.dust ? 'D' : 'n', v.pose[0], v.pose === 'reach' ? v.side : 0, jvB(v.tuck, 0.45, 1.1), jvB(v.stretch, 0.5, 1.5), jvB(v.lean, -0.1, 0.16), jvB(v.tRot, 0.1, 0.5)].join('');
   } while (v.key === prev && ++n < 20);
   if (v.key === prev) { v.dust = !v.dust; v.key = (v.dust ? 'D' : 'n') + v.key.slice(1); }
   const off = P0 => ({ l1: P0.l1 + v.dl1, l2: P0.l2 + v.dl2, a1: P0.a1 + v.da1, a2: P0.a2 + v.da2, lk: P0.lk, cape: P0.cape });
   v.rise = off(POSE.rise); v.fall = off(POSE.fall);
-  v.cr = off(POSE.crouch); v.cr.a1 += jvR(-0.6, 0.6); v.cr.a2 += jvR(-0.6, 0.6); v.cr.l1 *= 0.7 + 0.4 * v.crouch; v.cr.l2 *= 0.7 + 0.4 * v.crouch; v.cr.lk = lerp(0.95, 0.78, (v.crouch - 0.6) / 0.65); // take-off crouch varies too
   v.tk = lerpPose(POSE.fall, POSE.tuck, v.tuck); v.tk.lk = lerp(1, v.tlk, v.tuck); v.tk.l1 += v.dl1 * 0.5; v.tk.l2 += v.dl2 * 0.5;
   if (v.pose === 'reach') { const up = -2.55 - jvRnd() * 0.4, dn = 0.45 + jvRnd() * 0.5; // one arm reaches high forward, the other swings back
     for (const q of [v.rise, v.tk]) if (v.side === 1) { q.a1 = up; q.a2 = dn; } else { q.a2 = up; q.a1 = dn; } }
-  if (v.pose === 'split') { const sp = jvR(1.1, 1.45); // split leap: legs spread fore/aft instead of tucking
+  if (v.pose === 'split') { const sp = jvR(1.1, 1.45); // split leap: long legs spread fore/aft instead of tucking
     for (const q of [v.rise, v.tk]) { q.l1 = sp * 0.9; q.l2 = -sp; q.lk = 1.05; } }
+  if (v.pose === 'crouch') { const A = POSE.aircr, sp = v.spread, cr = v.cross; // mid-air crouch: wide-open bent legs, arms crossed over the chest
+    v.tk = { l1: A.l1 * sp, l2: A.l2 * sp, a1: A.a1 * cr, a2: A.a2 * (2 - cr), lk: A.lk - (sp - 1.0) * 0.3, cape: A.cape, ak: A.ak }; }
+  JA.poses.push(v.pose); if (JA.poses.length > 60) JA.poses.shift();
   JA.keys.push(v.key); if (JA.keys.length > 60) JA.keys.shift();
   return v;
 }
@@ -1480,13 +1485,14 @@ function playerPose() { // -> { pose, sx, sy, rot }  (sx/sy: extra scale, rot: e
   }
   if (!JA.jumped || !JA.V) { const u = clamp(vy / 600, 0, 1); return { pose: lerpPose(POSE.rise, POSE.fall, 0.5 + u * 0.5), sx: 1, sy: 1, rot: 0, ph: 'fall' }; } // walked off an edge
   const V = JA.V, ct = V.cT;
-  if (JA.airT < ct) { const u = clamp((JA.airT - ct * 0.38) / (ct * 0.62), 0, 1), c = V.crouch;
-    return { pose: lerpPose(V.cr, V.rise, jaEase(u)), sx: lerp(1 + 0.22 * c, 1 - 0.1 * V.stretch, u), sy: lerp(1 - 0.2 * c, 1 + 0.12 * V.stretch, u), rot: V.lean * (0.8 - 0.3 * u), ph: 'takeoff' }; }
-  const st = clamp(-vy / JUMP_V, 0, 1); // 1 right after take-off -> 0 at the apex
-  if (vy < -V.tuckV && JA.flip < 0) return { pose: lerpPose(V.tk, V.rise, clamp((-vy - V.tuckV) / 200, 0, 1)), sx: 1 - 0.1 * st * V.stretch, sy: 1 + 0.13 * st * V.stretch, rot: V.lean * (0.5 + 0.5 * st), ph: 'rise' };
+  const st = clamp(-vy / JUMP_V, 0, 1), cs = V.pose === 'crouch' ? 1 : 0; // st: 1 right after take-off -> 0 at the apex; cs: mid-air crouch style
+  if (JA.airT < ct) return { pose: V.rise, sx: 1 - 0.1 * st * V.stretch, sy: 1 + 0.13 * st * V.stretch, rot: V.lean * (0.5 + 0.5 * st), ph: 'takeoff' }; // launch = rising stretch straight away
+  if (vy < -V.tuckV && JA.flip < 0) { const u = clamp((-vy - V.tuckV) / 200, 0, 1), cw = cs * (1 - u);
+    return { pose: lerpPose(V.tk, V.rise, u), sx: 1 - 0.1 * st * V.stretch * u + 0.12 * cw, sy: 1 + 0.13 * st * V.stretch * u - 0.12 * cw, rot: V.lean * (0.5 + 0.5 * st), ph: cw > 0.5 ? 'crouch' : 'rise' }; }
   if (JA.flip >= 0) { const fu = Math.min(1, JA.flip);
     return { pose: extraPose(V, fu), sx: 1.03, sy: 0.95, rot: JA.spin, ph: 'flip', tw: JA.tw }; }
-  if (vy < V.fallV) { const tk = clamp(1 - Math.abs(vy) / (V.fallV + 40) + 0.25, 0, 1);
+  if (vy < V.fallV) { const tk = vy < 0 ? 1 : clamp(1 - vy / (V.fallV + 40) + 0.25, 0, 1); // hold the tuck/crouch pose up to the apex (no pop at the hand-over), open up while falling
+    if (cs) { const cw = clamp(tk * 1.25, 0, 1); return { pose: lerpPose(V.fall, V.tk, cw), sx: 1 + 0.12 * cw, sy: 1 - 0.12 * cw, rot: V.tRot * cw + V.lean * 0.5, ph: cw > 0.5 ? 'crouch' : 'apex' }; }
     return { pose: lerpPose(V.fall, V.tk, tk), sx: 1.03, sy: 0.95, rot: V.tRot * clamp(1 - Math.abs(vy) / V.fallV, 0, 1) + V.lean * 0.5, ph: 'apex' }; }
   const u = clamp((vy - V.fallV) / 500, 0, 1), fl = Math.sin(time * 22) * 0.28 * u;
   const po = lerpPose(V.tk, V.fall, clamp(u * 3, 0, 1)); po.a1 += fl; po.a2 -= fl;
@@ -2044,7 +2050,7 @@ Music.onChange = refreshMenus; // auto rotation updates the song window
 window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; },
   get points() { return points; }, get combo() { return combo; }, get comboMult() { return comboMult(); }, get bestPoints() { return bestPoints; }, get lastAward() { return lastAward; }, get popups() { return popups.length; }, start, press, release,
   get checkpoint() { return checkpoint; }, set checkpoint(v) { checkpoint = v | 0; }, restartFromStart, get bot() { return botOn; }, set bot(v) { botOn = !!v; },
-  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, anim: { get phase() { return JA.phase; }, get key() { return JA.V ? JA.V.key : ''; }, get variant() { const V = JA.V; return V ? { key: V.key, dust: V.dust, pose: V.pose, crouch: V.crouch, stretch: V.stretch, tuck: V.tuck, lean: V.lean, tuckV: V.tuckV } : null; }, get extra() { return JA.ex ? Object.assign({}, JA.ex) : null; }, get jumps() { return JA.jumps; }, get keys() { return JA.keys.slice(); }, get extras() { return JA.extras.slice(); }, get flips() { return JA.flips; }, get cut() { return JA.cut; }, get fx() { return JA.fx.length; }, screen() { return { x: (P.x - cam.x) * SCALE, y: (P.y - cam.y + VIEW_H * 0.5 - 60) * SCALE, s: SCALE }; } }, get player() { return P; }, get plats() { return plats; },
+  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, anim: { get phase() { return JA.phase; }, get key() { return JA.V ? JA.V.key : ''; }, get variant() { const V = JA.V; return V ? { key: V.key, dust: V.dust, pose: V.pose, spread: V.spread, stretch: V.stretch, tuck: V.tuck, lean: V.lean, tuckV: V.tuckV } : null; }, get extra() { return JA.ex ? Object.assign({}, JA.ex) : null; }, get jumps() { return JA.jumps; }, get keys() { return JA.keys.slice(); }, get extras() { return JA.extras.slice(); }, get poses() { return JA.poses.slice(); }, get flips() { return JA.flips; }, get cut() { return JA.cut; }, get fx() { return JA.fx.length; }, screen() { return { x: (P.x - cam.x) * SCALE, y: (P.y - cam.y + VIEW_H * 0.5 - 60) * SCALE, s: SCALE }; } }, get player() { return P; }, get plats() { return plats; },
   audio: { get volume() { return volume; }, set volume(v) { setVolume(v); }, get muted() { return muted; }, toggleMute,
     get masterTarget() { return master ? masterLevel() : null; }, get masterGain() { return master ? master.gain.value : null; },
     get music() { return Music.playing; }, get ctxState() { return AC ? AC.state : null; },
