@@ -15,7 +15,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.1</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.2</div>
 <script>
 (() => {
 'use strict';
@@ -41,6 +41,8 @@ const PW = 28, PH = 40;           // player size (world units)
 const COYOTE = 0.08, BUFFER = 0.12;
 const DT = 1 / 120;
 const CAPS = ['KEEP GOING', "DON'T FALL", 'NO CHECKPOINT', 'KEEP GOING', 'ONE LIFE', "DON'T FALL"];
+const CAPS_CP = ['KEEP GOING', "DON'T FALL", 'FASTER!', 'KEEP GOING', 'STAY SHARP', "DON'T FALL"]; // used once a checkpoint exists
+const CHECKPOINTS = [30, 45];     // platform idx that become checkpoints (per-run session, not persisted)
 
 // precompute reach (full-hold jump) for a given speed and height gain (dyUp>0 = higher)
 function reach(vx, dyUp) {
@@ -61,20 +63,32 @@ try { best = parseInt(localStorage.getItem('nightfall_best') || '0', 10) || 0; }
 let muted = false;
 try { muted = localStorage.getItem('nightfall_muted') === '1'; } catch (e) {}
 let P, plats, parts, cam, caption, shake, score, time, deadT, nearMiss, lastClutch, capIdx, newBestShown, almostShown, deathReason, flash;
+let checkpoint = 0;   // highest checkpoint reached in this session (0 = none)
+let easeIdx = -1;    // platform right after a respawn is generated static/solid (fairness)
 const demo = /[?&]demo=1/.test(location.search);
+let botOn = demo;
 
 function rand(a, b) { return a + Math.random() * (b - a); }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
-function reset() {
+function reset(fromCp = 0) {
   P = { x: 60, y: 0, vy: 0, ground: null, coyote: 0, buffer: 0, holding: false, holdT: 0, jumping: false,
         squash: 1, run: 0, stunned: false, alive: true, trail: [] };
   plats = []; parts = [];
   cam = { x: 0, y: -120, ty: -120 };
   caption = null; shake = 0; score = 0; time = 0; deadT = 0; nearMiss = false; lastClutch = false;
   capIdx = 0; newBestShown = false; almostShown = false; deathReason = ''; flash = 0;
-  // starting platform (wide, safe-looking)
-  plats.push(mkPlat(-200, 0, 520, 0, false));
+  easeIdx = -1;
+  if (fromCp > 0) {
+    // respawn on the checkpoint platform: wide, static, already reached; difficulty continues from fromCp
+    const sp = mkPlat(-200, 0, 600, fromCp, false);
+    sp.rest = true; sp.cp = true; sp.cpOn = true; sp.landed = true;
+    plats.push(sp);
+    score = fromCp; capIdx = Math.floor(fromCp / 10); easeIdx = fromCp + 1;
+  } else {
+    // starting platform (wide, safe-looking)
+    plats.push(mkPlat(-200, 0, 520, 0, false));
+  }
   while (plats[plats.length - 1].bx < 2500) genNext();
   P.ground = plats[0]; P.y = 0;
 }
@@ -96,16 +110,19 @@ function genNext() {
   let w = rand(lerp(220, 90, d), lerp(320, 150, d));
   let plank = false;
   if (idx > 25 && Math.random() < 0.15 + 0.35 * d) { plank = true; w = rand(lerp(110, 60, d), lerp(160, 90, d)); }
-  // rest platform every 30 (a "SAFE" spot but no checkpoint!)
-  const rest = idx % 30 === 0;
+  // rest platform every 30 (a "SAFE" spot); checkpoints at 30 and 45 are rest platforms too
+  const isCp = CHECKPOINTS.includes(idx);
+  const rest = idx % 30 === 0 || isCp;
   if (rest) { w = 300; plank = false; }
+  const ease = idx === easeIdx; // first platform after a respawn: solid and static
+  if (ease) { plank = false; w = Math.max(w, 180); }
   // height change
   const maxUp = APEX * (0.25 + 0.3 * d);
   let dy = rand(-maxUp, 40 + 110 * d); // negative = higher (canvas y down)
   let ny = clamp(prev.by + dy, -220, 160);
   // movement
   let ax = 0, ay = 0, sp = 0;
-  if (!rest && idx > 12 && Math.random() < 0.1 + 0.4 * d) {
+  if (!rest && !ease && idx > 12 && Math.random() < 0.1 + 0.4 * d) {
     sp = rand(1.2, 1.8 + 1.2 * d);
     if (Math.random() < 0.5) ax = rand(30, 50 + 60 * d); else ay = rand(30, 40 + 50 * d);
   }
@@ -119,7 +136,7 @@ function genNext() {
   let gap = rand(lo, Math.max(lo, hi));
   if (idx < 4) gap = rand(70, 110);
   const p = mkPlat(prev.bx + prev.w + gap, ny, w, idx, plank);
-  p.ax = ax; p.ay = ay; p.sp = sp; p.rest = rest;
+  p.ax = ax; p.ay = ay; p.sp = sp; p.rest = rest; p.cp = isCp; p.cpOn = isCp && idx <= checkpoint;
   plats.push(p);
 }
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -172,11 +189,26 @@ function press(e) {
   if (pressed) return; pressed = true;
   const now = performance.now();
   if (state === 'menu') { start(); return; }
-  if (state === 'dead') { if (deadT > 0.45) start(); return; }
+  if (state === 'dead') { if (deadT > 0.45) start(checkpoint); return; } // default retry = continue from checkpoint (0 if none)
   P.buffer = BUFFER; P.holding = true;
 }
 function release() { pressed = false; if (P) P.holding = false; }
-function start() { reset(); state = 'play'; showCaption(['NO CHECKPOINT.', 'ONE LIFE.'], '#ffd23f', 2.2); SFX.start(); pressed = true; P.holding = false; }
+function start(fromCp = 0) {
+  if (!fromCp) checkpoint = 0; // restart from the very beginning clears the session checkpoint
+  reset(fromCp); state = 'play';
+  if (fromCp) showCaption(['CHECKPOINT ' + fromCp, 'GO!'], '#5dffb0', 1.8);
+  else showCaption(['NO CHECKPOINT.', 'ONE LIFE.'], '#ffd23f', 2.2);
+  SFX.start(); pressed = true; P.holding = false;
+}
+function restartFromStart() { start(0); }
+// on-screen "RESTART FROM START" button on the game-over screen (CSS px), only when a checkpoint exists
+function restartBtnRect() {
+  const u = Math.min(W, H) / 100, ts = Math.min(W / 6.5, u * 15);
+  const bw = Math.min(W * 0.8, Math.max(200, u * 52)), bh = Math.max(40, ts * 0.42);
+  return { x: W / 2 - bw / 2, y: H * 0.42 + ts * 2.62, w: bw, h: bh };
+}
+function restartBtnActive() { return state === 'dead' && checkpoint > 0 && deadT > 0.45; }
+function inRestartBtn(cx, cy) { if (!restartBtnActive()) return false; const r = restartBtnRect(); return cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h; }
 function toggleMute() {
   muted = !muted; try { localStorage.setItem('nightfall_muted', muted ? '1' : '0'); } catch (e) {}
   if (master) master.gain.value = muted ? 0 : 0.5;
@@ -185,9 +217,11 @@ function inMuteBtn(cx, cy) { return cx > W - 56 && cy < 56; }
 window.addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); if (!e.repeat) press(); }
   else if (e.code === 'KeyM') toggleMute();
+  else if (e.code === 'KeyR' && !e.repeat && state === 'dead' && deadT > 0.45) { initAudio(); restartFromStart(); }
 });
 window.addEventListener('keyup', e => { if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); release(); } });
-cv.addEventListener('pointerdown', e => { e.preventDefault(); if (inMuteBtn(e.clientX, e.clientY)) { initAudio(); toggleMute(); return; } press(); });
+cv.addEventListener('pointerdown', e => { e.preventDefault(); if (inMuteBtn(e.clientX, e.clientY)) { initAudio(); toggleMute(); return; }
+  if (inRestartBtn(e.clientX, e.clientY)) { initAudio(); restartFromStart(); return; } press(); });
 window.addEventListener('pointerup', release);
 window.addEventListener('pointercancel', release);
 window.addEventListener('blur', release);
@@ -229,7 +263,7 @@ function step(dt) {
 
   const idxNow = P.ground ? P.ground.idx : (lastIdx() || 0);
   const vx = P.stunned ? 0 : speedAt(idxNow);
-  if (demo) demoBot();
+  if (botOn) demoBot();
 
   // ride platform
   if (P.ground) {
@@ -303,7 +337,13 @@ function land(pl) {
   if (!pl.landed) {
     pl.landed = true;
     score = Math.max(score, pl.idx);
-    if (clutch) {
+    const newCp = CHECKPOINTS.filter(c => c <= score && c > checkpoint).pop() || 0;
+    if (newCp) {
+      checkpoint = newCp;
+      for (const q of plats) if (q.cp && q.idx <= checkpoint) q.cpOn = true;
+      showCaption('CHECKPOINT!', '#5dffb0', 1.6, 1.25); SFX.best(); flash = 0.5; lastClutch = false;
+      burst(pl.x + pl.w / 2, pl.y - 60, 34, ['#5dffb0', '#ffd23f', '#ffffff'], 420, 0, 1, 6);
+    } else if (clutch) {
       showCaption('CLUTCH!', '#ffd23f', 1.0, 1.3); SFX.clutch(); flash = 0.6; lastClutch = true;
       burst(P.x, P.y, 26, ['#ffd23f', '#ff9f1c', '#ffffff'], 380, 1, 0.8, 6);
     } else if (best > 5 && score === best + 1 && !newBestShown) {
@@ -314,7 +354,8 @@ function land(pl) {
     } else if (lastClutch || pl.rest) {
       showCaption('SAFE', '#5dffb0', 0.8); SFX.safe(); lastClutch = false;
     } else if (score % 10 === 0) {
-      showCaption(CAPS[capIdx++ % CAPS.length], '#ffffff', 1.0); SFX.milestone();
+      const caps = checkpoint > 0 ? CAPS_CP : CAPS;
+      showCaption(caps[capIdx++ % caps.length], '#ffffff', 1.0); SFX.milestone();
     }
   }
 }
@@ -425,10 +466,36 @@ function drawPlat(pl) {
   // neon edge
   ctx.fillStyle = pl.landed ? 'rgba(255,210,63,0.9)' : 'rgba(255,210,63,0.55)';
   ctx.fillRect(x, y - 1, 3, pl.plank ? h : 18); ctx.fillRect(x + w - 3, y - 1, 3, pl.plank ? h : 18);
+  if (pl.cp) drawFlag(pl);
   if (pl.ax || pl.ay) { // movement hint arrows
     ctx.fillStyle = 'rgba(255,210,63,0.7)'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
     ctx.fillText(pl.ax ? '◀ ▶' : '▲▼', x + w / 2, y + (pl.plank ? 32 : 40));
   }
+}
+
+// checkpoint flag: blocky pole + pennant; glows/pulses once reached
+function drawFlag(pl) {
+  const fx = Math.round(pl.x + pl.w * 0.55), top = pl.y - 4, poleH = 78, on = pl.cpOn;
+  const pulse = on ? 0.75 + 0.25 * Math.sin(time * 5) : 0;
+  if (on) {
+    const gg = ctx.createRadialGradient(fx + 18, top - poleH + 16, 4, fx + 18, top - poleH + 16, 90);
+    gg.addColorStop(0, `rgba(93,255,176,${0.45 * pulse})`); gg.addColorStop(1, 'rgba(93,255,176,0)');
+    ctx.fillStyle = gg; ctx.fillRect(fx - 80, top - poleH - 80, 200, 190);
+  }
+  ctx.fillStyle = '#1a1438'; ctx.fillRect(fx - 7, top - 6, 18, 6);          // base block
+  ctx.fillStyle = on ? '#ffe9a8' : '#8f88b8'; ctx.fillRect(fx - 2, top - poleH, 4, poleH); // pole
+  ctx.fillStyle = on ? '#ffd23f' : '#6d6699'; ctx.fillRect(fx - 4, top - poleH - 6, 8, 6); // knob
+  // stepped pixel pennant
+  ctx.fillStyle = on ? '#5dffb0' : '#4a4378';
+  ctx.fillRect(fx + 2, top - poleH, 34, 26);
+  ctx.fillRect(fx + 36, top - poleH + 4, 6, 18);
+  ctx.fillRect(fx + 42, top - poleH + 9, 5, 8);
+  ctx.fillStyle = on ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.1)'; ctx.fillRect(fx + 2, top - poleH, 34, 4);
+  ctx.fillStyle = on ? '#0a3a26' : '#c9c3ff'; ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(pl.idx), fx + 20, top - poleH + 14);
+  ctx.textBaseline = 'alphabetic';
+  // neon rim on the platform top
+  if (on) { ctx.fillStyle = `rgba(93,255,176,${0.5 * pulse})`; ctx.fillRect(pl.x, pl.y - 2, pl.w, 3); }
 }
 
 function drawPlayer() {
@@ -499,7 +566,7 @@ function drawUI() {
     outlined('ONE LIFE', cw / 2, ch * 0.3 + ts * 1.05, ts * 0.7, '#ffffff');
     const p = 0.6 + 0.4 * Math.sin(time * 5);
     ctx.globalAlpha = p; outlined(isTouch ? 'TAP TO START' : 'SPACE / CLICK TO START', cw / 2, ch * 0.62, Math.min(cw / 16, u * 6), '#ffffff'); ctx.globalAlpha = 1;
-    outlined('HOLD = HIGHER JUMP · NO CHECKPOINTS', cw / 2, ch * 0.62 + u * 8, Math.min(cw / 30, u * 3.4), '#c9c3ff', 'center', 0.12);
+    outlined('HOLD = HIGHER JUMP · CHECKPOINTS AT 30 & 45', cw / 2, ch * 0.62 + u * 8, Math.min(cw / 30, u * 3.4), '#c9c3ff', 'center', 0.12);
     if (best > 0) outlined('BEST ' + best, cw / 2, ch * 0.62 + u * 15, u * 4.5, '#ffd23f');
     return;
   }
@@ -530,7 +597,18 @@ function drawUI() {
     outlined('SCORE ' + score, cw / 2, ch * 0.42 + ts * 0.95, ts * 0.42, '#ffffff');
     outlined((score >= best && score > 0 ? 'NEW BEST ' : 'BEST ') + best, cw / 2, ch * 0.42 + ts * 1.45, ts * 0.32, '#ffd23f');
     if (deadT > 0.45) { ctx.globalAlpha = a * (0.6 + 0.4 * Math.sin(time * 6));
-      outlined(isTouch ? 'TAP TO RETRY' : 'SPACE / CLICK TO RETRY', cw / 2, ch * 0.42 + ts * 2.1, Math.min(cw / 16, u * 5.5), '#ffffff'); }
+      const retry = checkpoint > 0 ? (isTouch ? 'TAP TO CONTINUE FROM ' + checkpoint : 'SPACE / CLICK: CONTINUE FROM ' + checkpoint)
+                                   : (isTouch ? 'TAP TO RETRY' : 'SPACE / CLICK TO RETRY');
+      outlined(retry, cw / 2, ch * 0.42 + ts * 2.1, Math.min(cw / 16, u * 5.5, cw * 0.9 / (retry.length * 0.75)), checkpoint > 0 ? '#5dffb0' : '#ffffff');
+      if (checkpoint > 0) {
+        ctx.globalAlpha = a;
+        const r = restartBtnRect(), bx = r.x * DPR, by = r.y * DPR, bw = r.w * DPR, bh = r.h * DPR;
+        ctx.fillStyle = 'rgba(20,14,50,0.85)'; ctx.fillRect(bx, by, bw, bh);
+        ctx.fillStyle = 'rgba(255,210,63,0.8)'; ctx.fillRect(bx, by, bw, 2 * DPR); ctx.fillRect(bx, by + bh - 2 * DPR, bw, 2 * DPR);
+        ctx.fillRect(bx, by, 2 * DPR, bh); ctx.fillRect(bx + bw - 2 * DPR, by, 2 * DPR, bh);
+        const lbl = isTouch ? '↺ RESTART FROM START' : '↺ RESTART FROM START (R)';
+        outlined(lbl, cw / 2, by + bh / 2, Math.min(bh * 0.45, bw * 0.9 / (lbl.length * 0.72)), '#ffd23f', 'center', 0.12);
+      } }
     ctx.globalAlpha = 1;
   }
 }
@@ -553,7 +631,9 @@ function frame(now) {
 resize();
 reset();
 if (demo) { state = 'play'; showCaption(['NO CHECKPOINT.', 'ONE LIFE.'], '#ffd23f', 2.2); }
-window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; }, start, press, release };
+window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; }, start, press, release,
+  get checkpoint() { return checkpoint; }, restartFromStart, get bot() { return botOn; }, set bot(v) { botOn = !!v; },
+  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, get player() { return P; }, get plats() { return plats; } };
 requestAnimationFrame(frame);
 })();
 </script>
