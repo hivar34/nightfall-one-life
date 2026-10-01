@@ -118,7 +118,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.4</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.5</div>
 <div id="sbToast" style="position:fixed;left:50%;bottom:44px;transform:translateX(-50%);padding:6px 12px;border-radius:8px;background:rgba(20,10,40,0.82);color:#ff8fb8;font:700 13px system-ui,sans-serif;letter-spacing:0.04em;pointer-events:none;user-select:none;z-index:6;opacity:0;transition:opacity .3s"></div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button><button id="shopBtn" class="mbtn" type="button" tabindex="-1" title="Skin shop (K)" aria-label="Skin shop"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="3.5" y="0.5" width="3" height="2.5"/><rect x="2.5" y="3.2" width="5" height="3"/><rect x="1" y="3.4" width="1.3" height="2.6"/><rect x="7.7" y="3.4" width="1.3" height="2.6"/><rect x="3" y="6.4" width="1.6" height="3.1"/><rect x="5.4" y="6.4" width="1.6" height="3.1"/></svg></button></div>
@@ -742,7 +742,7 @@ function step(dt) {
   P.squash += (1 - P.squash) * Math.min(1, dt * 14);
   if (P.ground) P.run += dt * vx / 22;
   // trail
-  P.trail.push({ x: P.x, y: P.y - PH / 2 }); if (P.trail.length > TRAIL_LEN) P.trail.shift();
+  P.trail.push({ x: P.x, y: P.y - PH / 2 }); if (P.trail.length > 14) P.trail.shift();
   // camera
   if (P.ground) cam.ty = P.ground.y - 130;
   if (P.y > cam.ty + 300) cam.ty = P.y - 300;
@@ -1283,47 +1283,27 @@ function selectTrail(i, announce) {
   trailIdx = ((i % TRAILS.length) + TRAILS.length) % TRAILS.length; try { localStorage.setItem('nightfall_trail', TRAILS[trailIdx].id); } catch (e) {}
   if (typeof menuOpen !== 'undefined' && menuOpen === 'shop') renderShop(); else if (announce) showToast('TRAIL: ' + TRAILS[trailIdx].name.toUpperCase(), '#5dffb0');
 }
-// ---- trail rendering (v0.8.4): thicker, brighter, more solid. 4 cheap passes per frame (soft glow, dark rim for light
-// backgrounds, bright core, light centre line); plain fillRects, no shadowBlur. Colours are brightened once and cached.
-const TRAIL_LEN = 22; // history points (was 14) -> longer, slower fade
-const trailBright = {}, trailHi = {};
-function parseCol(c) { if (c[0] === '#') return hexRgb(c); const m = c.match(/\d+/g); return [+m[0], +m[1], +m[2]]; }
-function brightCol(c) { // lift the colour so its brightest channel is ~255, then mix a little white
-  if (trailBright[c]) return trailBright[c];
-  const v = parseCol(c), mx = Math.max(v[0], v[1], v[2], 1), k = Math.min(255 / mx, 2.2), o = v.map(x => Math.round(Math.min(255, x * k) * 0.85 + 255 * 0.15));
-  trailHi[c] = 'rgb(' + o.map(x => Math.round(x * 0.45 + 255 * 0.55)).join(',') + ')';
-  return (trailBright[c] = 'rgb(' + o.join(',') + ')');
-}
-function hiCol(c) { brightCol(c); return trailHi[c]; }
-const trailCol = [], trailWhite = [];
 function drawTrail(sk) {
-  const tr = TRAILS[trailIdx], n = P.trail.length; if (!n) return;
-  // 1) colour of every segment (same choice of colour as v0.8.3, just brightened)
-  if (tr.ring) {
-    const ring = tr.ring, L = ring.length, sh = Math.floor(time * tr.speed), fl = Math.floor(time * 18), spk = tr.sparkle || sk.trail === 'gold';
-    for (let i = 0; i < n; i++) { let k = tr.step ? (tr.anim ? i * tr.step + sh : Math.floor(i / n * (L - 1))) : 0; if (tr.flicker) k += (i * 7 + fl) % 3;
-      trailCol[i] = ring[k % L]; trailWhite[i] = spk && i % 3 === 0; }
-  } else {
+  const tr = TRAILS[trailIdx];
+  if (tr.ring) { // chosen trail colour: same squares / embers / sparkles as the skin, colour from the precomputed ring
+    const n = P.trail.length, ring = tr.ring, L = ring.length, sh = Math.floor(time * tr.speed), fl = Math.floor(time * 18), base = sk.glow ? 0.42 : 0.38, spk = tr.sparkle || sk.trail === 'gold';
     for (let i = 0; i < n; i++) {
-      if (sk.trail === 'aurora') { trailCol[i] = 'hsl(' + Math.round((time * 80 + i * 22) % 360) + ',95%,62%)'; trailWhite[i] = false; }
-      else if (sk.trail === 'gold') { trailCol[i] = '#ffd23f'; trailWhite[i] = i % 3 === 0; }
-      else { trailCol[i] = 'rgb(' + sk.trail + ')'; trailWhite[i] = false; }
+      const t = P.trail[i], a = i / n;
+      let k = tr.step ? (tr.anim ? i * tr.step + sh : Math.floor(a * (L - 1))) : 0; if (tr.flicker) k += (i * 7 + fl) % 3;
+      ctx.fillStyle = spk && i % 3 === 0 ? '#ffffff' : ring[k % L]; ctx.globalAlpha = a * (spk && i % 3 === 0 ? 0.45 : base);
+      ctx.fillRect(t.x - 8 * a, t.y - 8 * a, 16 * a, 16 * a);
+      if (sk.ember && i % 4 === 1) { ctx.fillStyle = ring[(k + 1) % L]; ctx.globalAlpha = a * 0.6; ctx.fillRect(t.x - 10 + ((i * 37) % 7), t.y + 6 - a * 10, 2, 2); }
     }
+    ctx.globalAlpha = 1; return;
   }
-  // 2) passes. f: 0 (oldest) .. 1 (newest). size 9..26 (was 0..16), core alpha 0.3..0.95 (was 0..0.38)
-  const boost = sk.glow ? 1.06 : 1;
-  for (let i = 0; i < n; i++) { const t = P.trail[i], f = (i + 1) / n, s = (9 + 17 * f) * 1.45; // soft glow
-    ctx.fillStyle = trailWhite[i] ? '#ffffff' : brightCol(trailCol[i]); ctx.globalAlpha = 0.05 + 0.13 * f; ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s); }
-  ctx.fillStyle = '#000';
-  for (let i = 0; i < n; i++) { const t = P.trail[i], f = (i + 1) / n, s = 12 + 17 * f; // dark rim (contrast on snow / sunset)
-    ctx.globalAlpha = (0.08 + 0.2 * f); ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s); }
-  for (let i = 0; i < n; i++) { const t = P.trail[i], f = (i + 1) / n, s = 9 + 17 * f; // bright core
-    ctx.fillStyle = trailWhite[i] ? '#ffffff' : brightCol(trailCol[i]); ctx.globalAlpha = Math.min(1, (0.3 + 0.65 * f) * boost); ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s); }
-  for (let i = 0; i < n; i++) { const t = P.trail[i], f = (i + 1) / n, s = 4 + 7 * f; // light centre line
-    ctx.fillStyle = trailWhite[i] ? '#ffffff' : hiCol(trailCol[i]); ctx.globalAlpha = 0.25 + 0.55 * f; ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s); }
-  if (sk.ember) for (let i = 1; i < n; i += 4) { const t = P.trail[i], f = (i + 1) / n; // embers
-    ctx.fillStyle = tr.ring ? brightCol(trailCol[(i + 1) % n]) : '#ffc850'; ctx.globalAlpha = 0.4 + 0.5 * f; ctx.fillRect(t.x - 12 + ((i * 37) % 9), t.y + 8 - f * 14, 3, 3); }
-  ctx.globalAlpha = 1;
+  for (let i = 0; i < P.trail.length; i++) {
+    const t = P.trail[i], a = i / P.trail.length;
+    if (sk.trail === 'aurora') ctx.fillStyle = `hsla(${(time * 80 + i * 22) % 360},95%,65%,${a * 0.35})`;
+    else if (sk.trail === 'gold') ctx.fillStyle = i % 3 === 0 ? `rgba(255,255,255,${a * 0.45})` : `rgba(255,210,63,${a * 0.32})`;
+    else ctx.fillStyle = `rgba(${sk.trail},${a * (sk.glow ? 0.3 : 0.25)})`;
+    ctx.fillRect(t.x - 8 * a, t.y - 8 * a, 16 * a, 16 * a);
+    if (sk.ember && i % 4 === 1) { ctx.fillStyle = `rgba(255,200,80,${a * 0.6})`; ctx.fillRect(t.x - 10 + ((i * 37) % 7), t.y + 6 - a * 10, 2, 2); }
+  }
 }
 const skinIconCache = {};
 function skinIcon(id, locked) { // small pixel runner as a data URL (scoreboard + shop)
