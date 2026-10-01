@@ -120,7 +120,7 @@ try { muted = localStorage.getItem('nightfall_muted') === '1'; } catch (e) {}
 let volume = 0.6; // master volume 0..1 (music + SFX), persisted
 try { const v = localStorage.getItem('nightfall_volume'); if (v !== null && !isNaN(parseFloat(v))) volume = clamp(parseFloat(v) / 100, 0, 1); } catch (e) {}
 let P, plats, parts, cam, caption, shake, score, time, deadT, nearMiss, lastClutch, capIdx, newBestShown, almostShown, deathReason, flash;
-let points = 0, combo = 0, prevClutch = false, popups = [], lastAward = null, newBestPts = false; // points scoring (separate from platform score)
+let points = 0, cpPoints = 0, combo = 0, prevClutch = false, popups = [], lastAward = null, newBestPts = false; // points scoring (separate from platform score)
 let bestPoints = 0;
 try { bestPoints = parseInt(localStorage.getItem('nightfall_best_points') || '0', 10) || 0; } catch (e) {}
 function comboMult() { return Math.min(3, 1 + 0.1 * combo); }
@@ -500,7 +500,7 @@ function press(e) {
 function release() { pressed = false; if (P) P.holding = false; }
 function start(fromCp = 0) {
   if (bgRandom) setBg(randomBgIdx()); // Random mode: new background each run / retry / respawn (player is grounded here)
-  if (!fromCp) points = 0; // respawn keeps this run's points, a fresh run resets them
+  if (fromCp) points = cpPoints; else { points = 0; cpPoints = 0; } // respawn restores the points held at that checkpoint; a fresh run resets them
   combo = 0; prevClutch = false; popups = []; newBestPts = false;
   if (!fromCp) checkpoint = 0; // restart from the very beginning clears the session checkpoint
   reset(fromCp); state = 'play';
@@ -693,7 +693,7 @@ function land(pl) {
     score = Math.max(score, pl.idx);
     const newCp = CHECKPOINTS.filter(c => c <= score && c > checkpoint).pop() || 0;
     if (newCp) {
-      checkpoint = newCp;
+      checkpoint = newCp; cpPoints = points; // remember points at this checkpoint (landing award already added)
       for (const q of plats) if (q.cp && q.idx <= checkpoint) q.cpOn = true;
       showCaption('CHECKPOINT!', '#5dffb0', 1.6, 1.25); SFX.best(); flash = 0.5; lastClutch = false;
       burst(pl.x + pl.w / 2, pl.y - 60, 34, ['#5dffb0', '#ffd23f', '#ffffff'], 420, 0, 1, 6);
