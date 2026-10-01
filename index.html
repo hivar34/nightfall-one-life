@@ -60,17 +60,46 @@
   .mtoggle.on .msw::after{left:20px;background:#5dffb0;}
   .mmode{font-size:11px;margin:6px 0 2px;color:#c9c3ff;}
   .mmode b{color:#ffd23f;}
+  #nick{position:fixed;inset:0;z-index:20;background:rgba(5,4,20,0.72);display:none;}
+  #nick.open{display:block;}
+  #nick .menu{display:block;z-index:21;}
+  .nin{display:block;width:100%;box-sizing:border-box;margin:10px 0 4px;padding:10px;background:rgba(0,0,0,0.45);border:2px solid #ffd23f;border-radius:0;
+    box-shadow:0 0 12px rgba(255,210,63,0.25);color:#fff;font:900 18px monospace;letter-spacing:1px;outline:none;-webkit-user-select:text;user-select:text;touch-action:manipulation;}
+  .nin:focus{border-color:#5dffb0;box-shadow:0 0 14px rgba(93,255,176,0.4);}
+  .nin::placeholder{color:rgba(255,255,255,0.3);}
+  .nerr{min-height:14px;font-size:11px;color:#ff5d7a;}
+  .nbtn{display:block;width:100%;margin-top:6px;padding:10px;background:#ffd23f;color:#120a2a;border:2px solid #000;box-shadow:0 0 0 2px #ffd23f,0 0 18px rgba(255,210,63,0.45);
+    font:900 16px "Arial Black",Impact,system-ui,sans-serif;letter-spacing:2px;cursor:pointer;touch-action:manipulation;}
+  .nbtn:hover{background:#ffe27a;}
+  #ptag{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;display:none;align-items:center;gap:8px;
+    padding:4px 6px 4px 10px;background:rgba(10,8,32,0.55);border:1px solid rgba(93,255,176,0.45);font:700 12px monospace;color:#c9c3ff;white-space:nowrap;touch-action:none;}
+  #ptag.show{display:flex;}
+  #ptag b{color:#5dffb0;}
+  #ptagBtn{padding:4px 8px;border:1px solid rgba(255,210,63,0.6);background:rgba(255,210,63,0.12);color:#ffd23f;font:700 11px monospace;cursor:pointer;touch-action:none;}
+  #boardList{max-height:min(50vh,400px);overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain;}
+  .brow{display:flex;align-items:center;gap:8px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.07);}
+  .brow.hd{margin-top:4px;color:rgba(255,255,255,0.5);font-size:10px;border-bottom:1px solid rgba(255,210,63,0.35);}
+  .brow.me{background:rgba(255,210,63,0.14);box-shadow:inset 4px 0 0 #ffd23f;color:#ffd23f;}
+  .brow.gap{justify-content:center;color:rgba(255,255,255,0.4);padding:2px;}
+  .brow.empty{justify-content:center;color:rgba(255,255,255,0.55);font-weight:400;padding:12px 8px;}
+  .brk{width:34px;flex:none;color:#c9c3ff;}
+  .bnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .blv{flex:none;width:52px;text-align:right;color:#ffd23f;}
+  .bsrc{font-size:10px;color:rgba(255,255,255,0.5);margin-top:6px;text-align:center;}
   .mfoot{margin-top:6px;font-size:10px;font-weight:400;color:rgba(255,255,255,0.5);text-align:center;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.6.1</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.7</div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
-<div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button></div>
+<div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button></div>
 <div id="menuBack"></div>
 <div id="songMenu" class="menu" role="dialog" aria-label="Songs"><div class="mhead"><span>&#9835; SONGS</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="songList"></div><div class="mfoot">N = next song &middot; M = mute &middot; Esc = close</div></div>
 <div id="bgMenu" class="menu" role="dialog" aria-label="Backgrounds"><div class="mhead"><span>BACKGROUNDS</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><button id="bgRandom" class="mitem mtoggle" type="button" tabindex="-1"><span class="msw"></span><span class="mt"><span class="mn">RANDOM</span><span class="md">New random background each run / retry</span></span></button><div id="bgMode" class="mmode"></div><div id="bgList"></div><div class="mfoot">B = next background &middot; Esc = close</div></div>
+<div id="boardMenu" class="menu" role="dialog" aria-label="Scoreboard"><div class="mhead"><span>SCOREBOARD</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="boardMe" class="mmode"></div><div class="brow hd"><span class="brk">#</span><span class="bnm">PLAYER</span><span class="blv">LEVEL</span></div><div id="boardList"></div><div id="boardSrc" class="bsrc"></div><div class="mfoot">L = scoreboard &middot; Esc = close</div></div>
+<div id="ptag"><span>PLAYER: <b id="ptagName"></b></span><button id="ptagBtn" type="button" tabindex="-1">CHANGE</button></div>
+<div id="nick"><div class="menu" role="dialog" aria-label="Nickname"><div class="mhead"><span id="nickTitle">ENTER NICKNAME</span><button id="nickClose" class="mclose" type="button" aria-label="Close">&times;</button></div><div class="md" style="font-size:11px">Your name on the scoreboard. 2-16 characters: letters, numbers, space, _ . -</div><input id="nickIn" class="nin" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="NICKNAME" enterkeyhint="go" aria-label="Nickname"><div id="nickErr" class="nerr"></div><button id="nickGo" class="nbtn" type="button">START</button></div></div>
 <script>
 (() => {
 'use strict';
@@ -576,12 +605,14 @@ volBar.addEventListener('keydown', e => { // keyboard a11y when focused via Tab;
 });
 updateVolUI();
 window.addEventListener('keydown', e => {
+  if (nickOpen) return; // typing a nickname: no game keys
   if (menuOpen) { // menu window open: no jump / start; Esc closes
     if (e.code === 'Escape') { e.preventDefault(); closeMenu(); return; }
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); return; }
   }
   if (e.code === 'KeyN' && !e.repeat) { selectTrack(Music.track + 1); return; }
   if (e.code === 'KeyB' && !e.repeat) { selectBg(bgIdx + 1); return; }
+  if (e.code === 'KeyL' && !e.repeat) { openMenu('board'); return; }
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); if (!e.repeat) press(); }
   else if (e.code === 'KeyM') { initAudio(); toggleMute(); }
   else if (e.code === 'KeyR' && !e.repeat && state === 'dead' && deadT > 0.45) { initAudio(); restartFromStart(); }
@@ -707,6 +738,7 @@ function land(pl) {
   if (!pl.landed) {
     pl.landed = true;
     score = Math.max(score, pl.idx);
+    reportLevel(score); // scoreboard: new max level
     const newCp = CHECKPOINTS.filter(c => c <= score && c > checkpoint).pop() || 0;
     if (newCp) {
       checkpoint = newCp; cpPoints = points; // remember points at this checkpoint (landing award already added)
@@ -753,6 +785,7 @@ function die() {
   burst(P.x, Math.min(P.y, cam.y + VIEW_H * 0.6), 30, ['#ffd23f', '#9b8cff', '#ffffff'], 400, 0, 0.9, 6);
   const isBest = score > best;
   if (isBest) { best = score; try { localStorage.setItem('nightfall_best', String(best)); } catch (e) {} }
+  reportLevel(score); // scoreboard: run ended
   combo = 0; prevClutch = false; newBestPts = points > bestPoints;
   if (newBestPts) { bestPoints = points; try { localStorage.setItem('nightfall_best_points', String(bestPoints)); } catch (e) {} }
   if (nearMiss) showCaption('SO CLOSE', '#ff5d7a', 1.6, 1.1);
@@ -1267,7 +1300,8 @@ function frame(now) {
   let dt = (now - last) / 1000; last = now;
   const wantDuck = state === 'dead'; if (AC && wantDuck !== duckedFor) { duckedFor = wantDuck; Music.duck(wantDuck); }
   if (dt > 0.1) dt = 0.1;
-  if (menuOpen && state === 'play') acc = 0; // run paused while a menu window is open
+  if (state !== ptagState) { ptagState = state; updatePtag(); }
+  if ((menuOpen || nickOpen) && state === 'play') acc = 0; // run paused while a menu window is open
   else { acc += dt;
   while (acc >= DT) { step(DT); acc -= DT; } }
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -1282,14 +1316,17 @@ reset();
 if (demo) { state = 'play'; }
 // ================= MENU WINDOWS (songs / backgrounds) =================
 // DOM overlay like the volume bar: every event stops at the menu, so nothing here jumps or starts a run.
-let menuOpen = null; // null | 'song' | 'bg'
+let menuOpen = null; // null | 'song' | 'bg' | 'board'
 const mBtns = document.getElementById('mbtns'), songBtn = document.getElementById('songBtn'), bgBtn = document.getElementById('bgBtn');
 const mBack = document.getElementById('menuBack'), songMenu = document.getElementById('songMenu'), bgMenu = document.getElementById('bgMenu');
+const boardMenu = document.getElementById('boardMenu'), boardBtn = document.getElementById('boardBtn'), boardList = document.getElementById('boardList'), boardMeEl = document.getElementById('boardMe'), boardSrcEl = document.getElementById('boardSrc');
 const songList = document.getElementById('songList'), bgList = document.getElementById('bgList'), bgRandBtn = document.getElementById('bgRandom'), bgModeEl = document.getElementById('bgMode');
 function openMenu(which) {
+  if (nickOpen) return;
   if (menuOpen === which) { closeMenu(); return; }
   menuOpen = which; release();
   refreshMenus();
+  if (which === 'board') renderBoard();
 }
 function closeMenu() { if (!menuOpen) return; menuOpen = null; release(); refreshMenus(); }
 function selectTrack(i) { Music.setTrack(i); initAudio(); refreshMenus(); }
@@ -1317,10 +1354,10 @@ Music.tracks.forEach((tr, i) => songList.appendChild(mkItem(tr.sw, tr.bpm, tr.na
 THEMES.forEach((th, i) => bgList.appendChild(mkItem(th.sw, '', th.name, th.desc, 'ACTIVE', () => selectBg(i))));
 function refreshMenus() {
   mBack.classList.toggle('open', !!menuOpen);
-  songMenu.classList.toggle('open', menuOpen === 'song'); bgMenu.classList.toggle('open', menuOpen === 'bg');
-  songBtn.classList.toggle('on', menuOpen === 'song'); bgBtn.classList.toggle('on', menuOpen === 'bg');
+  songMenu.classList.toggle('open', menuOpen === 'song'); bgMenu.classList.toggle('open', menuOpen === 'bg'); boardMenu.classList.toggle('open', menuOpen === 'board');
+  songBtn.classList.toggle('on', menuOpen === 'song'); bgBtn.classList.toggle('on', menuOpen === 'bg'); boardBtn.classList.toggle('on', menuOpen === 'board');
   const note = state === 'play' ? 'RUN PAUSED \u00b7 ' + (checkpoint > 0 ? 'CHECKPOINT ' + checkpoint + ' SAVED' : 'close to resume') : '';
-  songMenu.querySelector('.mnote').textContent = note; bgMenu.querySelector('.mnote').textContent = note;
+  songMenu.querySelector('.mnote').textContent = note; bgMenu.querySelector('.mnote').textContent = note; boardMenu.querySelector('.mnote').textContent = note;
   [...songList.children].forEach((b, i) => b.classList.toggle('on', i === Music.track));
   [...bgList.children].forEach((b, i) => b.classList.toggle('on', i === bgIdx));
   bgRandBtn.classList.toggle('on', bgRandom);
@@ -1338,6 +1375,158 @@ bgBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; openMenu(
 mBack.addEventListener('pointerdown', () => closeMenu());
 document.querySelectorAll('.mclose').forEach(b => b.addEventListener('pointerdown', e => { if (e.button > 0) return; closeMenu(); }));
 bgRandBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; toggleBgRandom(); });
+boardBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; openMenu('board'); });
+// scoreboard window: same stop-propagation guard, but touch/wheel keep their default so the list can scroll
+['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchmove', 'touchend', 'contextmenu', 'wheel'].forEach(ev =>
+  boardMenu.addEventListener(ev, e => { e.stopPropagation(); if (ev === 'pointerup') release();
+    if (!/^(pointermove|pointerup|touchstart|touchmove|touchend|wheel)$/.test(ev)) e.preventDefault(); }, { passive: false }));
+
+// ================= NICKNAME + SCOREBOARD =================
+// Nickname rules (same as the server-side check in supabase/schema.sql)
+const NAME_RE = /^[A-Za-z0-9_.-]([A-Za-z0-9 _.-]*[A-Za-z0-9_.-])?$/;
+const BL_LONG = ['fuck', 'shit', 'cunt', 'bitch', 'nigger', 'nigga', 'faggot', 'retard', 'whore', 'slut', 'rapist', 'nazi', 'hitler', 'asshole',
+  'bastard', 'pussy', 'penis', 'vagina', 'porn', 'wank', 'twat', 'kike', 'chink', 'dildo', 'molest', 'pedo',
+  'wetback', 'beaner', 'raghead', 'towelhead', 'heil', 'whitepower', 'hentai', 'milf', 'onlyfans', 'horny', 'nsfw', 'boob', 'nude',
+  'blowjob', 'orgasm', 'xvideo', 'pornhub'];                                                                        // matched anywhere
+const BL_SHORT = ['fag', 'fags', 'spic', 'cock', 'dick', 'ass', 'sex', 'cum', 'tit', 'tits', 'rape', 'kkk', 'jizz',
+  'coon', 'gook', 'xxx', 'anal', 'nsfw', 'sexy'];                                                                   // whole words only
+function cleanName(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
+function nameProblem(raw) {
+  const n = cleanName(raw);
+  if (n.length < 2) return 'At least 2 characters';
+  if (n.length > 16) return 'Max 16 characters';
+  if (!NAME_RE.test(n)) return 'Only letters, numbers, space, _ . -';
+  if (/(1488|14 ?88)/.test(n)) return 'Please choose another name'; // same raw check as the server
+  const norm = n.toLowerCase().replace(/[0134578]/g, c => 'oieastb'['0134578'.indexOf(c)]);
+  const flat = norm.replace(/[^a-z]/g, ''), toks = norm.split(/[^a-z]+/);
+  if (BL_LONG.some(w => flat.includes(w)) || toks.some(t => BL_SHORT.includes(t))) return 'Please choose another name';
+  return '';
+}
+// ---- storage layer: Board.getBoard / Board.submitScore. localStorage today; Supabase REST when both constants are set.
+const SUPABASE_URL = 'https://bmpycovoeefmdvhjwzpk.supabase.co';      // e.g. 'https://abcd1234.supabase.co'  (Supabase > Project Settings > API > Project URL)
+const SUPABASE_ANON_KEY = 'sb_publishable_5aWg6e17P8SqnZmmuNn0TQ_BC3yXlSH'; // public client key: the publishable key (sb_publishable_...) or the legacy anon JWT (eyJ...). Safe to ship; writes only via rpc submit_score
+const BOARD_LIMIT = 100;
+const LocalStore = {
+  load(key = 'nightfall_board') { try { const o = JSON.parse(localStorage.getItem(key) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } },
+  save(o, key = 'nightfall_board') { try { localStorage.setItem(key, JSON.stringify(o)); } catch (e) {} },
+  submit(name, level) { const o = this.load(), k = name.toLowerCase(), cur = o[k];
+    if (!cur || level > (cur.level | 0)) { o[k] = { name: cur ? cur.name : name, level: level | 0, t: Date.now() }; this.save(o); } },
+  levelOf(name) { const e = this.load()[String(name).toLowerCase()]; return e ? e.level | 0 : 0; },
+  list() { return Object.values(this.load()).filter(e => e && typeof e.name === 'string' && !nameProblem(e.name))
+    .map(e => ({ name: e.name, level: e.level | 0, t: e.t || 0 })).sort((a, b) => b.level - a.level || a.t - b.t); },
+};
+function makeSupabase(url, key) {
+  const base = url.replace(/\/+$/, '') + '/rest/v1';
+  // publishable keys are not JWTs: send them only as `apikey`; the legacy anon JWT also goes in Authorization: Bearer
+  const auth = /^eyJ/.test(key) ? { apikey: key, Authorization: 'Bearer ' + key } : { apikey: key };
+  async function req(path, opt = {}) {
+    const ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
+    try { const r = await fetch(base + path, Object.assign({}, opt, { headers: Object.assign({}, auth, opt.headers || {}), signal: ac.signal }));
+      if (!r.ok) throw new Error('HTTP ' + r.status); return r; }
+    finally { clearTimeout(to); }
+  }
+  return {
+    async top() { const a = await (await req('/scores?select=name,best_level&order=best_level.desc,updated_at.asc&limit=' + BOARD_LIMIT)).json();
+      if (!Array.isArray(a)) throw new Error('bad payload'); return a.map(x => ({ name: String(x.name), level: x.best_level | 0 })); },
+    async countAbove(level) { // players strictly above `level` -> rank = count + 1 (for players outside the top 100)
+      const r = await req('/scores?select=name&limit=1&best_level=gt.' + (level | 0), { headers: { Prefer: 'count=exact' } });
+      const n = parseInt(String(r.headers.get('content-range') || '').split('/')[1], 10); return isNaN(n) ? null : n; },
+    async submit(name, level) { const r = await req('/rpc/submit_score', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_name: name, p_level: level | 0 }) }); return parseInt(await r.text(), 10) || 0; },
+  };
+}
+let sbCfg = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY }, sbApi = null, boardSource = 'local';
+function remote() { if (!sbCfg.url || !sbCfg.key) return null; if (!sbApi) sbApi = makeSupabase(sbCfg.url, sbCfg.key); return sbApi; }
+async function flushPending(r) { // scores that failed to upload while offline are retried on the next call
+  const pend = LocalStore.load('nightfall_board_pending'), keys = Object.keys(pend); if (!keys.length) return;
+  for (const k of keys) { await r.submit(pend[k].name, pend[k].level); delete pend[k]; LocalStore.save(pend, 'nightfall_board_pending'); }
+}
+const Board = {
+  get online() { return !!remote(); },
+  get source() { return boardSource; },
+  async submitScore(name, level) {
+    name = cleanName(name); level = level | 0; if (nameProblem(name) || level <= 0) return;
+    LocalStore.submit(name, level); // local copy always (offline fallback + own best)
+    const r = remote(); if (!r) { boardSource = 'local'; return; }
+    try { await flushPending(r); await r.submit(name, level); boardSource = 'online'; }
+    catch (e) { const pend = LocalStore.load('nightfall_board_pending'), k = name.toLowerCase();
+      if (!pend[k] || pend[k].level < level) { pend[k] = { name, level }; LocalStore.save(pend, 'nightfall_board_pending'); } boardSource = 'offline'; }
+  },
+  async getBoard(me) { // -> { rows: [{name, level}] sorted high -> low (max 100), me: {level, rank, inList} | null, source }
+    const r = remote(), local = LocalStore.list(); let rows = null, source = 'local';
+    if (r) { try { await flushPending(r).catch(() => {}); rows = await r.top(); source = 'online'; } catch (e) { rows = null; source = 'offline'; } }
+    if (!rows) rows = local.slice(0, BOARD_LIMIT).map(x => ({ name: x.name, level: x.level }));
+    let meInfo = null;
+    if (me) { const k = me.toLowerCase(), idx = rows.findIndex(x => x.name.toLowerCase() === k);
+      const level = Math.max(LocalStore.levelOf(me), idx >= 0 ? rows[idx].level : 0); let rank = idx >= 0 ? idx + 1 : null;
+      if (idx < 0 && level > 0) {
+        if (source === 'online') { try { const n = await r.countAbove(level); if (n != null) rank = n + 1; } catch (e) {} }
+        else { const li = local.findIndex(x => x.name.toLowerCase() === k); if (li >= 0) rank = li + 1; } }
+      meInfo = { level, rank, inList: idx >= 0 }; }
+    boardSource = source;
+    return { rows, me: meInfo, source };
+  },
+};
+// ---- nickname state
+let nick = '';
+try { nick = cleanName(localStorage.getItem('nightfall_nick') || ''); if (nameProblem(nick)) nick = ''; } catch (e) {}
+let boardBest = nick ? LocalStore.levelOf(nick) : 0, nickOpen = false, ptagState = null;
+function reportLevel(lv) { // called on every new max level and when a run ends
+  if (!nick || lv <= boardBest) return; boardBest = lv;
+  Board.submitScore(nick, lv).then(() => { if (menuOpen === 'board') renderBoard(); });
+}
+const nickEl = document.getElementById('nick'), nickIn = document.getElementById('nickIn'), nickErr = document.getElementById('nickErr');
+const nickGo = document.getElementById('nickGo'), nickClose = document.getElementById('nickClose'), nickTitle = document.getElementById('nickTitle');
+const ptag = document.getElementById('ptag'), ptagName = document.getElementById('ptagName'), ptagBtn = document.getElementById('ptagBtn');
+function updatePtag() { ptagName.textContent = nick; ptag.classList.toggle('show', !!nick && !nickOpen && state === 'menu'); }
+function openNick() {
+  closeMenu(); release(); nickOpen = true; nickEl.classList.add('open');
+  nickIn.value = nick; nickErr.textContent = '';
+  nickTitle.textContent = nick ? 'CHANGE NICKNAME' : 'ENTER NICKNAME'; nickGo.textContent = nick ? 'CONFIRM' : 'START';
+  nickClose.style.display = nick ? '' : 'none';
+  updatePtag(); setTimeout(() => { try { nickIn.focus(); } catch (e) {} }, 30);
+}
+function closeNick() { if (!nick) return; nickOpen = false; nickEl.classList.remove('open'); try { nickIn.blur(); } catch (e) {} updatePtag(); }
+function confirmNick() {
+  const n = cleanName(nickIn.value), err = nameProblem(n);
+  if (err) { nickErr.textContent = err; return; }
+  const first = !nick; nick = n; try { localStorage.setItem('nightfall_nick', nick); } catch (e) {}
+  boardBest = LocalStore.levelOf(nick);
+  if (first && best > boardBest) { boardBest = best; Board.submitScore(nick, best); } // first nickname inherits this device's best level
+  nickOpen = false; nickEl.classList.remove('open'); try { nickIn.blur(); } catch (e) {}
+  if (first && state === 'menu') { initAudio(); start(); } // START begins the first run
+  updatePtag();
+}
+['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchmove', 'touchend', 'contextmenu', 'wheel'].forEach(ev =>
+  nickEl.addEventListener(ev, e => { e.stopPropagation(); if (ev === 'pointerup') release(); }, { passive: false })); // no preventDefault: the text field must stay usable
+nickGo.addEventListener('click', e => { e.preventDefault(); confirmNick(); });
+nickClose.addEventListener('click', e => { e.preventDefault(); closeNick(); });
+nickIn.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); confirmNick(); } else if (e.key === 'Escape') closeNick(); });
+nickIn.addEventListener('input', () => { if (nickErr.textContent) nickErr.textContent = ''; });
+['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchmove', 'touchend', 'contextmenu'].forEach(ev =>
+  ptag.addEventListener(ev, e => { e.stopPropagation(); if (ev === 'pointerup') release(); if (ev !== 'pointermove' && ev !== 'pointerup') e.preventDefault(); }, { passive: false }));
+ptagBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; openNick(); });
+// ---- scoreboard window
+let boardReq = 0;
+function bRow(rank, name, level, me, cls) {
+  const d = document.createElement('div'); d.className = 'brow' + (me ? ' me' : '') + (cls ? ' ' + cls : '');
+  for (const [c, t] of [['brk', rank], ['bnm', name], ['blv', level]]) { const sp = document.createElement('span'); sp.className = c; sp.textContent = t; d.appendChild(sp); }
+  return d;
+}
+async function renderBoard() {
+  const id = ++boardReq; boardSrcEl.textContent = 'Loading...';
+  let res; try { res = await Board.getBoard(nick); } catch (e) { res = { rows: [], me: null, source: 'local' }; }
+  if (id !== boardReq) return;
+  boardList.textContent = ''; let meRow = null; const k = nick.toLowerCase();
+  if (!res.rows.length) { const d = document.createElement('div'); d.className = 'brow empty'; d.textContent = 'No scores yet. Play a run!'; boardList.appendChild(d); }
+  res.rows.forEach((r, i) => { const me = !!nick && r.name.toLowerCase() === k, d = bRow(i + 1, r.name, r.level, me); if (me) meRow = d; boardList.appendChild(d); });
+  if (res.me && !res.me.inList && res.rows.length) { const g = document.createElement('div'); g.className = 'brow gap'; g.textContent = '\u2026'; boardList.appendChild(g); }
+  if (res.me && !res.me.inList) { meRow = bRow(res.me.rank || '\u2013', nick, res.me.level, true); boardList.appendChild(meRow); }
+  boardMeEl.textContent = nick ? 'YOU: ' + nick + ' \u00b7 BEST LEVEL ' + (res.me ? res.me.level : 0) + (res.me && res.me.rank ? ' \u00b7 #' + res.me.rank : '') : '';
+  boardSrcEl.textContent = res.source === 'online' ? 'ONLINE \u00b7 top ' + BOARD_LIMIT : res.source === 'offline' ? 'OFFLINE \u00b7 showing scores saved on this device' : 'LOCAL \u00b7 scores saved on this device';
+  if (meRow) boardList.scrollTop = Math.max(0, meRow.offsetTop - boardList.offsetTop - boardList.clientHeight / 2);
+}
+if (!nick) openNick(); else updatePtag();
 refreshMenus();
 Music.onChange = refreshMenus; // auto rotation updates the song window
 window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; },
@@ -1352,7 +1541,10 @@ window.__nightfall = { get state() { return state; }, get score() { return score
     get rotation() { return Music.rotation; }, rotateNow() { Music.rotateNow(); } },
   bg: { get idx() { return bgIdx; }, get name() { return THEMES[bgIdx].name; }, get ids() { return THEMES.map(t => t.id); },
     get random() { return bgRandom; }, get manual() { return bgManual; }, get fading() { return !!bgFade; }, select: selectBg, toggleRandom: toggleBgRandom },
-  menu: { get open() { return menuOpen; }, show: openMenu, close: closeMenu, get paused() { return !!menuOpen && state === 'play'; } } };
+  menu: { get open() { return menuOpen; }, show: openMenu, close: closeMenu, get paused() { return (!!menuOpen || nickOpen) && state === 'play'; } },
+  board: { get nick() { return nick; }, get nickOpen() { return nickOpen; }, openNick, validate: nameProblem, get boardBest() { return boardBest; },
+    getBoard: () => Board.getBoard(nick), submitScore: (n, l) => Board.submitScore(n, l), get source() { return Board.source; }, get online() { return Board.online; },
+    _testConfig(url, key) { sbCfg = { url: url || '', key: key || '' }; sbApi = null; } } }; // _testConfig: test hook only (real config = constants above)
 requestAnimationFrame(frame);
 })();
 </script>
