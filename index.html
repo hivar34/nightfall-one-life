@@ -86,20 +86,38 @@
   .bnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .blv{flex:none;width:52px;text-align:right;color:#ffd23f;}
   .bsrc{font-size:10px;color:rgba(255,255,255,0.5);margin-top:6px;text-align:center;}
+  #ptagCoins{color:#ffd23f;}
+  #ptagCoins.off{color:rgba(255,255,255,0.45);}
+  .bic{flex:none;width:14px;height:20px;image-rendering:pixelated;}
+  #shopList{max-height:min(52vh,420px);overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain;}
+  .sitem{display:flex;align-items:center;gap:10px;margin:5px 0;padding:6px 8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);}
+  .sitem.eq{border-color:#ffd23f;background:rgba(255,210,63,0.14);box-shadow:inset 4px 0 0 #ffd23f;}
+  .sitem.prem{border:1px solid transparent;background:linear-gradient(rgba(16,10,40,0.95),rgba(16,10,40,0.95)) padding-box,
+    linear-gradient(90deg,#ffd23f,#ff3fa4,#5dffb0,#17d4ff,#ffd23f) border-box;background-size:auto,300% 100%;animation:premb 4s linear infinite;}
+  .sitem.prem.eq{box-shadow:inset 4px 0 0 #ffd23f,0 0 12px rgba(255,210,63,0.35);}
+  @keyframes premb{to{background-position:0 0,300% 0;}}
+  .sic{flex:none;width:30px;height:42px;image-rendering:pixelated;}
+  .sitem.lock .sic{opacity:0.85;}
+  .stag{display:inline-block;margin-left:6px;padding:0 4px;font-size:9px;color:#120a2a;background:linear-gradient(90deg,#ffd23f,#ff8fb8);vertical-align:1px;}
+  .sbtn{flex:none;min-width:70px;padding:6px 6px;border:1px solid rgba(255,210,63,0.6);background:rgba(255,210,63,0.12);color:#ffd23f;font:700 11px monospace;cursor:pointer;touch-action:none;}
+  .sbtn.buy{background:#ffd23f;color:#120a2a;border-color:#000;}
+  .sbtn:disabled{cursor:default;opacity:0.5;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.2);}
+  .sbtn.on{opacity:1;background:transparent;border-color:transparent;color:#ffd23f;}
   .mfoot{margin-top:6px;font-size:10px;font-weight:400;color:rgba(255,255,255,0.5);text-align:center;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.7.1</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8</div>
 <div id="sbToast" style="position:fixed;left:50%;bottom:44px;transform:translateX(-50%);padding:6px 12px;border-radius:8px;background:rgba(20,10,40,0.82);color:#ff8fb8;font:700 13px system-ui,sans-serif;letter-spacing:0.04em;pointer-events:none;user-select:none;z-index:6;opacity:0;transition:opacity .3s"></div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
-<div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button></div>
+<div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button><button id="shopBtn" class="mbtn" type="button" tabindex="-1" title="Skin shop (K)" aria-label="Skin shop"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="3.5" y="0.5" width="3" height="2.5"/><rect x="2.5" y="3.2" width="5" height="3"/><rect x="1" y="3.4" width="1.3" height="2.6"/><rect x="7.7" y="3.4" width="1.3" height="2.6"/><rect x="3" y="6.4" width="1.6" height="3.1"/><rect x="5.4" y="6.4" width="1.6" height="3.1"/></svg></button></div>
 <div id="menuBack"></div>
 <div id="songMenu" class="menu" role="dialog" aria-label="Songs"><div class="mhead"><span>&#9835; SONGS</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="songList"></div><div class="mfoot">N = next song &middot; M = mute &middot; Esc = close</div></div>
 <div id="bgMenu" class="menu" role="dialog" aria-label="Backgrounds"><div class="mhead"><span>BACKGROUNDS</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><button id="bgRandom" class="mitem mtoggle" type="button" tabindex="-1"><span class="msw"></span><span class="mt"><span class="mn">RANDOM</span><span class="md">New random background each run / retry</span></span></button><div id="bgMode" class="mmode"></div><div id="bgList"></div><div class="mfoot">B = next background &middot; Esc = close</div></div>
-<div id="boardMenu" class="menu" role="dialog" aria-label="Scoreboard"><div class="mhead"><span>SCOREBOARD</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="boardMe" class="mmode"></div><div class="brow hd"><span class="brk">#</span><span class="bnm">PLAYER</span><span class="blv">LEVEL</span></div><div id="boardList"></div><div id="boardSrc" class="bsrc"></div><div class="mfoot">L = scoreboard &middot; Esc = close</div></div>
-<div id="ptag"><span>PLAYER: <b id="ptagName"></b></span><button id="ptagBtn" type="button" tabindex="-1">CHANGE</button></div>
+<div id="boardMenu" class="menu" role="dialog" aria-label="Scoreboard"><div class="mhead"><span>SCOREBOARD</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="boardMe" class="mmode"></div><div class="brow hd"><span class="brk">#</span><span class="bic"></span><span class="bnm">PLAYER</span><span class="blv">LEVEL</span></div><div id="boardList"></div><div id="boardSrc" class="bsrc"></div><div class="mfoot">L = scoreboard &middot; Esc = close</div></div>
+<div id="shopMenu" class="menu" role="dialog" aria-label="Skin shop"><div class="mhead"><span>SKIN SHOP</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="shopCoins" class="mmode"></div><div id="shopList"></div><div id="shopMsg" class="bsrc"></div><div class="mfoot">Coins: 1 per level (1-30), 2 (31-60), 3 (61+) &middot; K = shop &middot; Esc = close</div></div>
+<div id="ptag"><span>PLAYER: <b id="ptagName"></b> &middot; <span id="ptagCoins"></span></span><button id="ptagBtn" type="button" tabindex="-1">CHANGE</button></div>
 <div id="nick"><div class="menu" role="dialog" aria-label="Nickname"><div class="mhead"><span id="nickTitle">ENTER NICKNAME</span><button id="nickClose" class="mclose" type="button" aria-label="Close">&times;</button></div><div class="md" style="font-size:11px">Your name on the scoreboard. 2-16 characters: letters, numbers, space, _ . -</div><input id="nickIn" class="nin" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="NICKNAME" enterkeyhint="go" aria-label="Nickname"><div id="nickErr" class="nerr"></div><button id="nickGo" class="nbtn" type="button">START</button></div></div>
 <script>
 (() => {
@@ -615,6 +633,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyN' && !e.repeat) { selectTrack(Music.track + 1); return; }
   if (e.code === 'KeyB' && !e.repeat) { selectBg(bgIdx + 1); return; }
   if (e.code === 'KeyL' && !e.repeat) { openMenu('board'); return; }
+  if (e.code === 'KeyK' && !e.repeat) { openMenu('shop'); return; }
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); if (!e.repeat) press(); }
   else if (e.code === 'KeyM') { initAudio(); toggleMute(); }
   else if (e.code === 'KeyR' && !e.repeat && state === 'dead' && deadT > 0.45) { initAudio(); restartFromStart(); }
@@ -787,7 +806,7 @@ function die() {
   burst(P.x, Math.min(P.y, cam.y + VIEW_H * 0.6), 30, ['#ffd23f', '#9b8cff', '#ffffff'], 400, 0, 0.9, 6);
   const isBest = score > best;
   if (isBest) { best = score; try { localStorage.setItem('nightfall_best', String(best)); } catch (e) {} }
-  reportLevel(score); // scoreboard: run ended
+  reportLevel(score, true); // scoreboard: run ended (also settles this run's coins)
   combo = 0; prevClutch = false; newBestPts = points > bestPoints;
   if (newBestPts) { bestPoints = points; try { localStorage.setItem('nightfall_best_points', String(bestPoints)); } catch (e) {} }
   if (nearMiss) showCaption('SO CLOSE', '#ff5d7a', 1.6, 1.1);
@@ -1175,6 +1194,74 @@ function drawFlag(pl) {
   if (on) { ctx.fillStyle = `rgba(93,255,176,${0.5 * pulse})`; ctx.fillRect(pl.x, pl.y - 2, pl.w, 3); }
 }
 
+// ---- runner skins (v0.8): palette, glow, trail, small accessory. Prices are enforced server-side (supabase/migration_coins.sql)
+const SKINS = [
+  { id: 1, name: 'Street Runner', price: 0, desc: 'The original night runner: yellow, blue and ready to jump.',
+    legs: '#3fae49', torso: '#1f6fe0', arms: '#f5cd30', head: '#f5cd30', eye: '#111', trail: '255,210,63' },
+  { id: 2, name: 'Neon Pulse', price: 1200, desc: 'Cyan and magenta, wired straight into the city grid.',
+    legs: '#ff3fa4', torso: '#00c8f0', arms: '#e8fbff', head: '#e8fbff', eye: '#111', trail: '0,220,255', glow: '0,220,255', acc: 'visor', accC: '#ff3fa4' },
+  { id: 3, name: 'Midnight Ember', price: 3000, desc: 'Runs hot and leaves a trail of embers in the dark.',
+    legs: '#2a1020', torso: '#c2361a', arms: '#ffb27a', head: '#ffb27a', eye: '#2a0a00', trail: '255,110,30', glow: '255,90,20', acc: 'headband', accC: '#ff5a1f', ember: true },
+  { id: 4, name: 'Vice Flamingo', price: 6000, desc: 'Sunset pink, shore-road teal and a pair of shades.',
+    legs: '#1fc9b0', torso: '#ff5fae', arms: '#ffd7a8', head: '#ffd7a8', eye: '#111', trail: '255,95,174', acc: 'shades', accC: '#111' },
+  { id: 5, name: 'Frostbyte', price: 10000, desc: 'Ice-blue circuits. Cool under pressure, even at full speed.',
+    legs: '#3a5fd9', torso: '#bfe8ff', arms: '#eaf6ff', head: '#eaf6ff', eye: '#1a2a55', trail: '180,230,255', glow: '170,220,255', acc: 'beanie', accC: '#3a5fd9' },
+  { id: 6, name: 'Moonshadow', price: 16000, desc: 'A violet shadow that slips between the moonbeams.',
+    legs: '#1a1238', torso: '#4a2c8a', arms: '#c9b8ff', head: '#c9b8ff', eye: '#1a1238', trail: '170,120,255', glow: '150,100,255', acc: 'hood', accC: '#2a1a58' },
+  { id: 7, name: 'Aurora Phantom', price: 60000, premium: true, desc: 'ELITE. Wears the northern lights; its trail shifts through every color.',
+    legs: '#103a3a', torso: '#5dffb0', arms: '#e8fff6', head: '#e8fff6', eye: '#0a2a2a', trail: 'aurora', glow: '93,255,176', acc: 'halo', accC: '#bfffe6', aurora: true },
+  { id: 8, name: 'Nightfall Sovereign', price: 120000, premium: true, desc: 'ELITE. Gold crown, black cape: ruler of the endless night.',
+    legs: '#2a2340', torso: '#14101e', arms: '#ffd23f', head: '#ffd23f', eye: '#14101e', trail: 'gold', glow: '255,210,63', acc: 'crown', accC: '#ffd23f', cape: '#7a1030' },
+];
+function skinById(id) { return SKINS.find(k => k.id === (id | 0)) || SKINS[0]; }
+// body in runner-local units (feet at 0,0; 40 tall); sw = run swing, air = airborne pose, t = time (for animated skins)
+function drawRunner(c, sk, sw, air, t, silhouette) {
+  const col = v => silhouette || v;
+  if (sk.glow && !silhouette) { const g = c.createRadialGradient(0, -22, 4, 0, -22, 36); g.addColorStop(0, `rgba(${sk.glow},0.32)`); g.addColorStop(1, `rgba(${sk.glow},0)`);
+    c.fillStyle = g; c.fillRect(-36, -58, 72, 72); }
+  if (sk.cape) { c.fillStyle = col(sk.cape); c.save(); c.translate(-9, -30); c.rotate(air ? 0.5 : 0.18 + Math.abs(sw) * 0.12); c.fillRect(-6, 0, 7, 22); c.restore(); }
+  c.fillStyle = col(sk.legs);
+  c.save(); c.translate(-6, -14); c.rotate(air ? -0.5 : sw * 0.7); c.fillRect(-4, 0, 8, 14); c.restore();
+  c.save(); c.translate(6, -14); c.rotate(air ? 0.4 : -sw * 0.7); c.fillRect(-4, 0, 8, 14); c.restore();
+  c.fillStyle = col(sk.aurora ? `hsl(${(t * 50) % 360},90%,62%)` : sk.torso); c.fillRect(-10, -30, 20, 17);
+  if (sk.cape && !silhouette) { c.fillStyle = '#ffd23f'; c.fillRect(-10, -30, 20, 2); c.fillRect(-1, -28, 2, 15); }
+  c.fillStyle = col(sk.arms);
+  c.save(); c.translate(-12, -29); c.rotate(air ? -2.4 : -sw * 0.8); c.fillRect(-3, 0, 6, 14); c.restore();
+  c.save(); c.translate(12, -29); c.rotate(air ? 2.4 : sw * 0.8); c.fillRect(-3, 0, 6, 14); c.restore();
+  c.fillStyle = col(sk.head); c.fillRect(-8, -42, 16, 13);
+  if (!silhouette) { c.fillStyle = sk.eye; c.fillRect(1, -38, 3, 3); c.fillRect(5, -38, 2, 3); c.fillRect(1, -33, 6, 1.5); }
+  c.fillStyle = col(sk.accC || '#000');
+  switch (sk.acc) {
+    case 'visor': c.fillRect(-8, -39, 16, 4); if (!silhouette) { c.fillStyle = 'rgba(255,255,255,0.55)'; c.fillRect(2, -39, 5, 1); } break;
+    case 'headband': c.fillRect(-8, -42, 16, 3); c.fillRect(-12, -42, 4, 2); c.fillRect(-15, -40, 4, 2); break;
+    case 'shades': c.fillRect(0, -39, 4, 3); c.fillRect(4.5, -39, 3, 3); c.fillRect(-8, -39, 9, 1); if (!silhouette) { c.fillStyle = '#ff5fae'; c.fillRect(1, -39, 1, 1); } break;
+    case 'beanie': c.fillRect(-9, -46, 18, 6); if (!silhouette) c.fillStyle = '#ffffff'; c.fillRect(-9, -41, 18, 1.5); c.fillRect(-2, -49, 4, 3); break;
+    case 'hood': c.fillRect(-9, -44, 18, 4); c.fillRect(-9, -44, 4, 15); break;
+    case 'halo': { const a = silhouette ? 1 : 0.65 + 0.35 * Math.sin(t * 4); c.globalAlpha = a; c.fillRect(-7, -51, 14, 2); c.fillRect(-9, -50, 2, 2); c.fillRect(7, -50, 2, 2); c.globalAlpha = 1; break; }
+    case 'crown': c.fillRect(-8, -46, 16, 4); c.fillRect(-8, -49, 3, 3); c.fillRect(-1.5, -50, 3, 4); c.fillRect(5, -49, 3, 3);
+      if (!silhouette) { c.fillStyle = '#ff3f6e'; c.fillRect(-1, -45, 2, 2); } break;
+  }
+}
+function drawTrail(sk) {
+  for (let i = 0; i < P.trail.length; i++) {
+    const t = P.trail[i], a = i / P.trail.length;
+    if (sk.trail === 'aurora') ctx.fillStyle = `hsla(${(time * 80 + i * 22) % 360},95%,65%,${a * 0.35})`;
+    else if (sk.trail === 'gold') ctx.fillStyle = i % 3 === 0 ? `rgba(255,255,255,${a * 0.45})` : `rgba(255,210,63,${a * 0.32})`;
+    else ctx.fillStyle = `rgba(${sk.trail},${a * (sk.glow ? 0.3 : 0.25)})`;
+    ctx.fillRect(t.x - 8 * a, t.y - 8 * a, 16 * a, 16 * a);
+    if (sk.ember && i % 4 === 1) { ctx.fillStyle = `rgba(255,200,80,${a * 0.6})`; ctx.fillRect(t.x - 10 + ((i * 37) % 7), t.y + 6 - a * 10, 2, 2); }
+  }
+}
+const skinIconCache = {};
+function skinIcon(id, locked) { // small pixel runner as a data URL (scoreboard + shop)
+  const key = id + (locked ? 'L' : ''); if (skinIconCache[key]) return skinIconCache[key];
+  const sk = skinById(id), c2 = document.createElement('canvas'); c2.width = 30; c2.height = 42; const c = c2.getContext('2d');
+  c.translate(15, 40); c.scale(0.68, 0.68);
+  drawRunner(c, sk, 0.35, false, 1.2, locked ? (sk.premium ? '#3a2d10' : '#262040') : null);
+  if (locked) { c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = sk.premium ? '#ffd23f' : '#c9c3ff'; c.font = 'bold 14px monospace'; c.textAlign = 'center'; c.fillText('?', 15, 27); }
+  try { return (skinIconCache[key] = c2.toDataURL()); } catch (e) { return ''; }
+}
+
 function drawPlayer() {
   const sq = P.squash;
   const fw = clamp(PW * sq, PW * 0.7, PW * 1.5), fh = clamp(PH / sq, PH * 0.7, PH * 1.4);
@@ -1186,21 +1273,7 @@ function drawPlayer() {
   const k = fh / PH, kw = fw / PW;
   ctx.scale(kw, k);
   const sw = Math.sin(P.run) * (P.ground ? 1 : 0.2);
-  const air = !P.ground;
-  // legs (green)
-  ctx.fillStyle = '#3fae49';
-  ctx.save(); ctx.translate(-6, -14); ctx.rotate(air ? -0.5 : sw * 0.7); ctx.fillRect(-4, 0, 8, 14); ctx.restore();
-  ctx.save(); ctx.translate(6, -14); ctx.rotate(air ? 0.4 : -sw * 0.7); ctx.fillRect(-4, 0, 8, 14); ctx.restore();
-  // torso (blue)
-  ctx.fillStyle = '#1f6fe0'; ctx.fillRect(-10, -30, 20, 17);
-  // arms (yellow)
-  ctx.fillStyle = '#f5cd30';
-  ctx.save(); ctx.translate(-12, -29); ctx.rotate(air ? -2.4 : -sw * 0.8); ctx.fillRect(-3, 0, 6, 14); ctx.restore();
-  ctx.save(); ctx.translate(12, -29); ctx.rotate(air ? 2.4 : sw * 0.8); ctx.fillRect(-3, 0, 6, 14); ctx.restore();
-  // head
-  ctx.fillStyle = '#f5cd30'; ctx.fillRect(-8, -42, 16, 13);
-  ctx.fillStyle = '#111'; ctx.fillRect(1, -38, 3, 3); ctx.fillRect(5, -38, 2, 3);
-  ctx.fillRect(1, -33, 6, 1.5);
+  drawRunner(ctx, mySkin(), sw, !P.ground, time);
   ctx.restore();
 }
 
@@ -1213,10 +1286,7 @@ function drawWorld() {
   ctx.translate(-cam.x, -cam.y + VIEW_H * 0.5 - 60);
   for (const pl of plats) if (pl.x < cam.x + VIEW_W + 50 && pl.x + pl.w > cam.x - 50) drawPlat(pl);
   // trail
-  for (let i = 0; i < P.trail.length; i++) {
-    const t = P.trail[i], a = i / P.trail.length;
-    ctx.fillStyle = `rgba(255,210,63,${a * 0.25})`; ctx.fillRect(t.x - 8 * a, t.y - 8 * a, 16 * a, 16 * a);
-  }
+  drawTrail(mySkin());
   if (state !== 'dead' || deadT < 1.5) drawPlayer();
   for (const p of parts) { ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.c; ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s); }
   for (const q of popups) { ctx.globalAlpha = clamp((1.1 - q.t) / 0.35, 0, 1); outlined(q.text, q.x, q.y, 15, q.c, 'center', 0.2); }
@@ -1318,9 +1388,10 @@ reset();
 if (demo) { state = 'play'; }
 // ================= MENU WINDOWS (songs / backgrounds) =================
 // DOM overlay like the volume bar: every event stops at the menu, so nothing here jumps or starts a run.
-let menuOpen = null; // null | 'song' | 'bg' | 'board'
+let menuOpen = null; // null | 'song' | 'bg' | 'board' | 'shop'
 const mBtns = document.getElementById('mbtns'), songBtn = document.getElementById('songBtn'), bgBtn = document.getElementById('bgBtn');
 const mBack = document.getElementById('menuBack'), songMenu = document.getElementById('songMenu'), bgMenu = document.getElementById('bgMenu');
+const shopMenu = document.getElementById('shopMenu'), shopBtn = document.getElementById('shopBtn'), shopList = document.getElementById('shopList'), shopCoinsEl = document.getElementById('shopCoins'), shopMsgEl = document.getElementById('shopMsg');
 const boardMenu = document.getElementById('boardMenu'), boardBtn = document.getElementById('boardBtn'), boardList = document.getElementById('boardList'), boardMeEl = document.getElementById('boardMe'), boardSrcEl = document.getElementById('boardSrc');
 const songList = document.getElementById('songList'), bgList = document.getElementById('bgList'), bgRandBtn = document.getElementById('bgRandom'), bgModeEl = document.getElementById('bgMode');
 function openMenu(which) {
@@ -1329,6 +1400,7 @@ function openMenu(which) {
   menuOpen = which; release();
   refreshMenus();
   if (which === 'board') renderBoard();
+  if (which === 'shop') { renderShop(); refreshProfile().then(renderShop); }
 }
 function closeMenu() { if (!menuOpen) return; menuOpen = null; release(); refreshMenus(); }
 function selectTrack(i) { Music.setTrack(i); initAudio(); refreshMenus(); }
@@ -1356,10 +1428,10 @@ Music.tracks.forEach((tr, i) => songList.appendChild(mkItem(tr.sw, tr.bpm, tr.na
 THEMES.forEach((th, i) => bgList.appendChild(mkItem(th.sw, '', th.name, th.desc, 'ACTIVE', () => selectBg(i))));
 function refreshMenus() {
   mBack.classList.toggle('open', !!menuOpen);
-  songMenu.classList.toggle('open', menuOpen === 'song'); bgMenu.classList.toggle('open', menuOpen === 'bg'); boardMenu.classList.toggle('open', menuOpen === 'board');
-  songBtn.classList.toggle('on', menuOpen === 'song'); bgBtn.classList.toggle('on', menuOpen === 'bg'); boardBtn.classList.toggle('on', menuOpen === 'board');
+  songMenu.classList.toggle('open', menuOpen === 'song'); bgMenu.classList.toggle('open', menuOpen === 'bg'); boardMenu.classList.toggle('open', menuOpen === 'board'); shopMenu.classList.toggle('open', menuOpen === 'shop');
+  songBtn.classList.toggle('on', menuOpen === 'song'); bgBtn.classList.toggle('on', menuOpen === 'bg'); boardBtn.classList.toggle('on', menuOpen === 'board'); shopBtn.classList.toggle('on', menuOpen === 'shop');
   const note = state === 'play' ? 'RUN PAUSED \u00b7 ' + (checkpoint > 0 ? 'CHECKPOINT ' + checkpoint + ' SAVED' : 'close to resume') : '';
-  songMenu.querySelector('.mnote').textContent = note; bgMenu.querySelector('.mnote').textContent = note; boardMenu.querySelector('.mnote').textContent = note;
+  songMenu.querySelector('.mnote').textContent = note; bgMenu.querySelector('.mnote').textContent = note; boardMenu.querySelector('.mnote').textContent = note; shopMenu.querySelector('.mnote').textContent = note;
   [...songList.children].forEach((b, i) => b.classList.toggle('on', i === Music.track));
   [...bgList.children].forEach((b, i) => b.classList.toggle('on', i === bgIdx));
   bgRandBtn.classList.toggle('on', bgRandom);
@@ -1378,10 +1450,11 @@ mBack.addEventListener('pointerdown', () => closeMenu());
 document.querySelectorAll('.mclose').forEach(b => b.addEventListener('pointerdown', e => { if (e.button > 0) return; closeMenu(); }));
 bgRandBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; toggleBgRandom(); });
 boardBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; openMenu('board'); });
+shopBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; openMenu('shop'); });
 // scoreboard window: same stop-propagation guard, but touch/wheel keep their default so the list can scroll
 ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchmove', 'touchend', 'contextmenu', 'wheel'].forEach(ev =>
-  boardMenu.addEventListener(ev, e => { e.stopPropagation(); if (ev === 'pointerup') release();
-    if (!/^(pointermove|pointerup|touchstart|touchmove|touchend|wheel)$/.test(ev)) e.preventDefault(); }, { passive: false }));
+  [boardMenu, shopMenu].forEach(el => el.addEventListener(ev, e => { e.stopPropagation(); if (ev === 'pointerup') release();
+    if (!/^(pointermove|pointerup|touchstart|touchmove|touchend|wheel)$/.test(ev)) e.preventDefault(); }, { passive: false })));
 
 // ================= NICKNAME + SCOREBOARD =================
 // Nickname rules (same as the server-side check in supabase/schema.sql)
@@ -1430,15 +1503,23 @@ function makeSupabase(url, key) {
     finally { clearTimeout(to); }
   }
   return {
-    async top() { const a = await (await req('/scores?select=name,best_level&order=best_level.desc,updated_at.asc&limit=' + BOARD_LIMIT)).json();
-      if (!Array.isArray(a)) throw new Error('bad payload'); return a.map(x => ({ name: String(x.name), level: x.best_level | 0 })); },
+    async top() { // scores_board = scores + equipped skin (v0.8 migration); falls back to plain scores if the view is missing
+      let r; try { r = await req('/scores_board?select=name,best_level,skin&order=best_level.desc,updated_at.asc&limit=' + BOARD_LIMIT); }
+      catch (e) { if (!(e.status >= 400 && e.status < 500)) throw e; r = await req('/scores?select=name,best_level&order=best_level.desc,updated_at.asc&limit=' + BOARD_LIMIT); }
+      const a = await r.json(); if (!Array.isArray(a)) throw new Error('bad payload'); return a.map(x => ({ name: String(x.name), level: x.best_level | 0, skin: x.skin | 0 || 1 })); },
+    async rpc(fn, body, extra) { return (await req('/rpc/' + fn, Object.assign({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, extra || {}))).json(); },
+    profile(name) { return this.rpc('get_profile', { p_name: name }); },
+    buySkin(name, id) { return this.rpc('buy_skin', { p_name: name, p_skin_id: id | 0 }); },
+    equipSkin(name, id) { return this.rpc('equip_skin', { p_name: name, p_skin_id: id | 0 }); },
     async countAbove(level) { // players strictly above `level` -> rank = count + 1 (for players outside the top 100)
       const r = await req('/scores?select=name&limit=1&best_level=gt.' + (level | 0), { headers: { Prefer: 'count=exact' } });
       const n = parseInt(String(r.headers.get('content-range') || '').split('/')[1], 10); return isNaN(n) ? null : n; },
     async startRun(name) { const r = await req('/rpc/start_run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_name: name }) }); const id = await r.json(); if (typeof id !== 'string' || !id) throw new Error('bad run id'); return id; },
-    async submit(name, level, runId, clientMs) { const r = await req('/rpc/submit_score', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_name: name, p_level: level | 0, p_run_id: runId, p_client_ms: Math.max(0, Math.round(clientMs)) }) }); return parseInt(await r.text(), 10) || 0; },
+    async submit(name, level, runId, clientMs, keepalive) { const r = await req('/rpc/submit_score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: !!keepalive,
+      body: JSON.stringify({ p_name: name, p_level: level | 0, p_run_id: runId, p_client_ms: Math.max(0, Math.round(clientMs)) }) });
+      const t = await r.text(); let v = null; try { v = JSON.parse(t); } catch (e) {} // v0.8: {best_level, coins, earned}
+      return v && typeof v === 'object' ? v : { best_level: parseInt(t, 10) || 0 }; },
   };
 }
 let sbCfg = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY }, sbApi = null, boardSource = 'local';
@@ -1452,7 +1533,7 @@ function beginRun() {
   if (nick && r) run.ready = r.startRun(nick).then(id => { run.id = id; return id; }, () => null); // failed -> this run stays local-only
   else run.ready = Promise.resolve(null);
 }
-function showToast(msg) { const el = document.getElementById('sbToast'); if (!el) return; el.textContent = msg; el.style.opacity = '1';
+function showToast(msg, color) { const el = document.getElementById('sbToast'); if (!el) return; el.textContent = msg; el.style.color = color || '#ff8fb8'; el.style.opacity = '1';
   clearTimeout(toastT); toastT = setTimeout(() => { el.style.opacity = '0'; }, 3500); }
 function rejected(e) { return !!(e && e.status >= 400 && e.status < 500); } // server said no (validation / speed check): retrying won't help
 function tooFast(e) { return rejected(e) && /too fast/i.test(e.server || ''); }
@@ -1461,7 +1542,7 @@ async function flushPending(r) { // scores that failed to upload while offline a
   const pend = LocalStore.load('nightfall_board_pending'), keys = Object.keys(pend); if (!keys.length) return;
   for (const k of keys) { const e = pend[k];
     if (!e || !e.runId || !(Date.now() - (e.runStartedAt || 0) < RUN_MAX_AGE)) { delete pend[k]; LocalStore.save(pend, 'nightfall_board_pending'); continue; }
-    try { await r.submit(e.name, e.level, e.runId, e.clientMs); }
+    try { gotCoins(await r.submit(e.name, e.level, e.runId, e.clientMs), e.name, null); }
     catch (err) { if (!rejected(err)) throw err; if (tooFast(err)) showToast('SCORE NOT ACCEPTED: TOO FAST'); } // rejected -> drop it
     delete pend[k]; LocalStore.save(pend, 'nightfall_board_pending'); }
 }
@@ -1475,7 +1556,7 @@ const Board = {
     if (!run || run.name.toLowerCase() !== name.toLowerCase()) return; // no server run for this score -> local only
     const clientMs = performance.now() - run.t0, runId = run.id || await run.ready;
     if (!runId) return; // start_run failed (offline / rate limited) -> this run counts locally only
-    try { await flushPending(r); await r.submit(name, level, runId, clientMs); boardSource = 'online'; }
+    try { await flushPending(r); gotCoins(await r.submit(name, level, runId, clientMs), name, run); boardSource = 'online'; }
     catch (e) {
       if (tooFast(e)) { showToast('SCORE NOT ACCEPTED: TOO FAST'); return; }
       if (rejected(e)) return; // e.g. run expired / clock mismatch: not queued
@@ -1486,7 +1567,7 @@ const Board = {
   async getBoard(me) { // -> { rows: [{name, level}] sorted high -> low (max 100), me: {level, rank, inList} | null, source }
     const r = remote(), local = LocalStore.list(); let rows = null, source = 'local';
     if (r) { try { await flushPending(r).catch(() => {}); rows = await r.top(); source = 'online'; } catch (e) { rows = null; source = 'offline'; } }
-    if (!rows) rows = local.slice(0, BOARD_LIMIT).map(x => ({ name: x.name, level: x.level }));
+    if (!rows) rows = local.slice(0, BOARD_LIMIT).map(x => ({ name: x.name, level: x.level, skin: me && x.name.toLowerCase() === me.toLowerCase() ? profile.equipped : 1 }));
     let meInfo = null;
     if (me) { const k = me.toLowerCase(), idx = rows.findIndex(x => x.name.toLowerCase() === k);
       const level = Math.max(LocalStore.levelOf(me), idx >= 0 ? rows[idx].level : 0); let rank = idx >= 0 ? idx + 1 : null;
@@ -1502,14 +1583,81 @@ const Board = {
 let nick = '';
 try { nick = cleanName(localStorage.getItem('nightfall_nick') || ''); if (nameProblem(nick)) nick = ''; } catch (e) {}
 let boardBest = nick ? LocalStore.levelOf(nick) : 0, nickOpen = false, ptagState = null;
-function reportLevel(lv) { // called on every new max level and when a run ends
-  if (!nick || lv <= boardBest) return; boardBest = lv;
-  Board.submitScore(nick, lv, curRun).then(() => { if (menuOpen === 'board') renderBoard(); });
+function reportLevel(lv, final) { // called on every new max level and when a run ends (final)
+  if (!nick) return;
+  const run = curRun && curRun.name.toLowerCase() === nick.toLowerCase() ? curRun : null, sent = run ? run.sent || 0 : 0;
+  const newBest = lv > boardBest; if (newBest) boardBest = lv;
+  // send: every new personal best (live scoreboard), every 10 levels of a run, and at the end of a run (coins for this run)
+  if (lv > sent && (newBest || final || lv - sent >= 10) && (run || newBest)) {
+    if (run) run.sent = lv;
+    Board.submitScore(nick, lv, run).then(() => { if (final) showRunCoins(); if (menuOpen === 'board') renderBoard(); });
+  } else if (final) showRunCoins();
+}
+function showRunCoins() { if (curRun && curRun.earned > 0 && state === 'dead') showToast('+' + curRun.earned + ' COINS THIS RUN', '#ffd23f'); }
+window.addEventListener('pagehide', () => { // closing mid-run: send the level reached so its coins aren't lost
+  const r = remote(), run = curRun; if (!r || !nick || !run || !run.id || state !== 'play' || score <= (run.sent || 0)) return;
+  run.sent = score; r.submit(nick, score, run.id, performance.now() - run.t0, true).catch(() => {}); });
+// ---- coins + skins profile (server: get_profile / buy_skin / equip_skin; coins credited by submit_score)
+function profileCache() { return LocalStore.load('nightfall_profile'); }
+function loadProfile(name) { const e = name && profileCache()[name.toLowerCase()];
+  return { coins: e && typeof e.coins === 'number' ? e.coins : null, owned: e && Array.isArray(e.owned) ? e.owned : [1], equipped: e ? e.equipped | 0 || 1 : 1 }; }
+let profile = loadProfile(nick), profileOnline = false, shopBusy = false, shopMsg = '';
+function owns(id) { const sk = skinById(id); return sk.price === 0 || profile.owned.includes(sk.id); }
+function mySkin() { return owns(profile.equipped) ? skinById(profile.equipped) : SKINS[0]; }
+function applyProfile(p, name) {
+  if (!p || typeof p !== 'object' || (name || nick).toLowerCase() !== nick.toLowerCase()) return;
+  profile = { coins: p.coins | 0, owned: Array.isArray(p.owned) ? p.owned.map(x => x | 0) : [1], equipped: p.equipped | 0 || 1 }; profileOnline = true;
+  const c = profileCache(); c[nick.toLowerCase()] = profile; LocalStore.save(c, 'nightfall_profile');
+  updatePtag(); if (menuOpen === 'shop') renderShop();
+}
+function gotCoins(res, name, run) { // submit_score result -> balance (+ coins earned this run)
+  if (!res || typeof res.coins !== 'number') return;
+  if (run) run.earned = (run.earned || 0) + (res.earned | 0);
+  if (cleanName(name).toLowerCase() === nick.toLowerCase()) applyProfile(Object.assign({}, profile, { coins: res.coins }), name);
+}
+async function refreshProfile() {
+  const r = remote(), n = nick; if (!n) return;
+  if (!r) { profileOnline = false; updatePtag(); return; }
+  try { applyProfile(await r.profile(n), n); } catch (e) { if (n === nick) { profileOnline = false; updatePtag(); } }
+}
+function shopErr(e) { const m = (e && e.server) || ''; return /not enough coins/i.test(m) ? 'NOT ENOUGH COINS' : /already owned/i.test(m) ? 'ALREADY OWNED'
+  : /not owned/i.test(m) ? 'NOT OWNED YET' : e && e.status ? 'NOT ALLOWED (' + (m || e.status) + ')' : 'OFFLINE · TRY AGAIN LATER'; }
+async function shopAction(kind, id) {
+  const r = remote(); if (!r || !nick || shopBusy || !profileOnline) return;
+  shopBusy = true; shopMsg = kind === 'buy' ? 'BUYING...' : 'EQUIPPING...'; renderShop();
+  try { const p = await (kind === 'buy' ? r.buySkin(nick, id) : r.equipSkin(nick, id)); shopMsg = kind === 'buy' ? skinById(id).name.toUpperCase() + ' UNLOCKED!' : '';
+    applyProfile(p, nick); }
+  catch (e) { shopMsg = shopErr(e); if (!e || !e.status) profileOnline = false; }
+  shopBusy = false; renderShop();
+}
+function renderShop() {
+  const on = profileOnline && !!remote();
+  shopCoinsEl.innerHTML = on ? 'COINS: <b>' + profile.coins + '</b> · PLAYER ' : 'COINS: <b>unavailable (offline)</b> · buying disabled · ';
+  shopCoinsEl.appendChild(document.createTextNode(on ? nick : ''));
+  shopList.textContent = '';
+  for (const sk of SKINS) {
+    const own = owns(sk.id), eq = mySkin().id === sk.id, d = document.createElement('div');
+    d.className = 'sitem' + (eq ? ' eq' : '') + (own ? '' : ' lock') + (sk.premium ? ' prem' : '');
+    const im = document.createElement('img'); im.className = 'sic'; im.alt = ''; im.src = skinIcon(sk.id, !own); d.appendChild(im);
+    const t = document.createElement('span'); t.className = 'mt'; const n = document.createElement('span'); n.className = 'mn'; n.textContent = sk.name;
+    if (sk.premium) { const tg = document.createElement('span'); tg.className = 'stag'; tg.textContent = 'ELITE'; n.appendChild(tg); }
+    const ds = document.createElement('span'); ds.className = 'md'; ds.textContent = sk.desc.replace(/^ELITE\. /, ''); t.append(n, ds); d.appendChild(t);
+    const bt = document.createElement('button'); bt.type = 'button'; bt.tabIndex = -1; bt.className = 'sbtn';
+    if (eq) { bt.textContent = 'EQUIPPED'; bt.className += ' on'; bt.disabled = true; }
+    else if (own) { bt.textContent = 'EQUIP'; bt.disabled = !on || shopBusy; bt.addEventListener('pointerdown', e => { if (e.button > 0 || bt.disabled) return; shopAction('equip', sk.id); }); }
+    else { const can = on && profile.coins >= sk.price; bt.textContent = (can ? 'BUY ' : '\ud83d\udd12 ') + sk.price; if (can) bt.className += ' buy';
+      bt.disabled = !can || shopBusy; bt.title = on ? (can ? 'Buy for ' + sk.price + ' coins' : (sk.price - profile.coins) + ' more coins needed') : 'Offline';
+      bt.addEventListener('pointerdown', e => { if (e.button > 0 || bt.disabled) return; shopAction('buy', sk.id); }); }
+    d.appendChild(bt); d.dataset.skin = sk.id; shopList.appendChild(d);
+  }
+  shopMsgEl.textContent = shopMsg || (on ? 'Coins come from levels you reach (checked by the server).' : 'Connect to the internet to see coins and buy skins.');
 }
 const nickEl = document.getElementById('nick'), nickIn = document.getElementById('nickIn'), nickErr = document.getElementById('nickErr');
 const nickGo = document.getElementById('nickGo'), nickClose = document.getElementById('nickClose'), nickTitle = document.getElementById('nickTitle');
 const ptag = document.getElementById('ptag'), ptagName = document.getElementById('ptagName'), ptagBtn = document.getElementById('ptagBtn');
-function updatePtag() { ptagName.textContent = nick; ptag.classList.toggle('show', !!nick && !nickOpen && state === 'menu'); }
+function updatePtag() { ptagName.textContent = nick; const c = document.getElementById('ptagCoins'), on = profileOnline && !!remote();
+  c.textContent = on ? 'COINS ' + profile.coins : 'COINS –'; c.className = on ? '' : 'off'; c.title = on ? '' : 'Coins unavailable (offline)';
+  ptag.classList.toggle('show', !!nick && !nickOpen && state === 'menu'); }
 function openNick() {
   closeMenu(); release(); nickOpen = true; nickEl.classList.add('open');
   nickIn.value = nick; nickErr.textContent = '';
@@ -1522,7 +1670,8 @@ function confirmNick() {
   const n = cleanName(nickIn.value), err = nameProblem(n);
   if (err) { nickErr.textContent = err; return; }
   const first = !nick; nick = n; try { localStorage.setItem('nightfall_nick', nick); } catch (e) {}
-  if (curRun && curRun.name.toLowerCase() !== nick.toLowerCase()) curRun = null; // a run belongs to one nickname; the next fresh run gets a new id
+  if (curRun && curRun.name.toLowerCase() !== nick.toLowerCase()) curRun = null;
+  profile = loadProfile(nick); profileOnline = false; shopMsg = ''; refreshProfile(); // a run belongs to one nickname; the next fresh run gets a new id
   boardBest = LocalStore.levelOf(nick);
   if (first && best > boardBest) { boardBest = best; Board.submitScore(nick, best); } // first nickname inherits this device's best level
   nickOpen = false; nickEl.classList.remove('open'); try { nickIn.blur(); } catch (e) {}
@@ -1540,10 +1689,12 @@ nickIn.addEventListener('input', () => { if (nickErr.textContent) nickErr.textCo
 ptagBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; openNick(); });
 // ---- scoreboard window
 let boardReq = 0;
-function bRow(rank, name, level, me, cls) {
+function bRow(rank, name, level, me, cls, skin) {
   const d = document.createElement('div'); d.className = 'brow' + (me ? ' me' : '') + (cls ? ' ' + cls : '');
-  for (const [c, t] of [['brk', rank], ['bnm', name], ['blv', level]]) { const sp = document.createElement('span'); sp.className = c; sp.textContent = t; d.appendChild(sp); }
-  return d;
+  for (const [c, t] of [['brk', rank], ['bnm', name], ['blv', level]]) { const sp = document.createElement('span'); sp.className = c; sp.textContent = t;
+    if (c === 'bnm') { const im = document.createElement('img'); im.className = 'bic'; im.alt = ''; im.src = skinIcon(skin || 1, false); im.title = skinById(skin || 1).name; d.appendChild(im); }
+    d.appendChild(sp); }
+  d.dataset.skin = skin || 1; return d;
 }
 async function renderBoard() {
   const id = ++boardReq; boardSrcEl.textContent = 'Loading...';
@@ -1551,14 +1702,14 @@ async function renderBoard() {
   if (id !== boardReq) return;
   boardList.textContent = ''; let meRow = null; const k = nick.toLowerCase();
   if (!res.rows.length) { const d = document.createElement('div'); d.className = 'brow empty'; d.textContent = 'No scores yet. Play a run!'; boardList.appendChild(d); }
-  res.rows.forEach((r, i) => { const me = !!nick && r.name.toLowerCase() === k, d = bRow(i + 1, r.name, r.level, me); if (me) meRow = d; boardList.appendChild(d); });
+  res.rows.forEach((r, i) => { const me = !!nick && r.name.toLowerCase() === k, d = bRow(i + 1, r.name, r.level, me, '', me ? mySkin().id : r.skin); if (me) meRow = d; boardList.appendChild(d); });
   if (res.me && !res.me.inList && res.rows.length) { const g = document.createElement('div'); g.className = 'brow gap'; g.textContent = '\u2026'; boardList.appendChild(g); }
-  if (res.me && !res.me.inList) { meRow = bRow(res.me.rank || '\u2013', nick, res.me.level, true); boardList.appendChild(meRow); }
+  if (res.me && !res.me.inList) { meRow = bRow(res.me.rank || '\u2013', nick, res.me.level, true, '', mySkin().id); boardList.appendChild(meRow); }
   boardMeEl.textContent = nick ? 'YOU: ' + nick + ' \u00b7 BEST LEVEL ' + (res.me ? res.me.level : 0) + (res.me && res.me.rank ? ' \u00b7 #' + res.me.rank : '') : '';
   boardSrcEl.textContent = res.source === 'online' ? 'ONLINE \u00b7 top ' + BOARD_LIMIT : res.source === 'offline' ? 'OFFLINE \u00b7 showing scores saved on this device' : 'LOCAL \u00b7 scores saved on this device';
   if (meRow) boardList.scrollTop = Math.max(0, meRow.offsetTop - boardList.offsetTop - boardList.clientHeight / 2);
 }
-if (!nick) openNick(); else updatePtag();
+if (!nick) openNick(); else { updatePtag(); refreshProfile(); }
 refreshMenus();
 Music.onChange = refreshMenus; // auto rotation updates the song window
 window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; },
@@ -1575,7 +1726,7 @@ window.__nightfall = { get state() { return state; }, get score() { return score
     get random() { return bgRandom; }, get manual() { return bgManual; }, get fading() { return !!bgFade; }, select: selectBg, toggleRandom: toggleBgRandom },
   menu: { get open() { return menuOpen; }, show: openMenu, close: closeMenu, get paused() { return (!!menuOpen || nickOpen) && state === 'play'; } },
   board: { get nick() { return nick; }, get nickOpen() { return nickOpen; }, openNick, validate: nameProblem, get boardBest() { return boardBest; },
-    getBoard: () => Board.getBoard(nick), submitScore: (n, l, run) => Board.submitScore(n, l, run), get run() { return curRun; }, beginRun, get source() { return Board.source; }, get online() { return Board.online; },
+    getBoard: () => Board.getBoard(nick), submitScore: (n, l, run) => Board.submitScore(n, l, run), get run() { return curRun; }, beginRun, get profile() { return profile; }, get profileOnline() { return profileOnline; }, refreshProfile, shopAction, skins: SKINS, get skin() { return mySkin().id; }, get source() { return Board.source; }, get online() { return Board.online; },
     _testConfig(url, key) { sbCfg = { url: url || '', key: key || '' }; sbApi = null; } } }; // _testConfig: test hook only (real config = constants above)
 requestAnimationFrame(frame);
 })();
