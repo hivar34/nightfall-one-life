@@ -84,7 +84,8 @@
   .brow.empty{justify-content:center;color:rgba(255,255,255,0.55);font-weight:400;padding:12px 8px;}
   .brk{width:34px;flex:none;color:#c9c3ff;}
   .bnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .blv{flex:none;width:52px;text-align:right;color:#ffd23f;}
+  .blv{flex:none;width:44px;text-align:right;color:#ffd23f;}
+  .bpt{flex:none;width:66px;text-align:right;color:#5dffb0;}
   .bsrc{font-size:10px;color:rgba(255,255,255,0.5);margin-top:6px;text-align:center;}
   #ptagCoins{color:#ffd23f;}
   #ptagCoins.off{color:rgba(255,255,255,0.45);}
@@ -103,20 +104,29 @@
   .sbtn.buy{background:#ffd23f;color:#120a2a;border-color:#000;}
   .sbtn:disabled{cursor:default;opacity:0.5;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.2);}
   .sbtn.on{opacity:1;background:transparent;border-color:transparent;color:#ffd23f;}
+  .tsec{margin:4px 0 8px;padding:7px 8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);}
+  .thd{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:#c9c3ff;margin-bottom:6px;}
+  .thd b{color:#ffd23f;} .thd i{font-style:normal;font-size:9px;color:rgba(255,255,255,0.45);}
+  .tgrid{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;}
+  .tsw{aspect-ratio:1;min-width:0;padding:0;border:2px solid rgba(0,0,0,0.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.22);cursor:pointer;touch-action:none;
+    font:700 8px monospace;color:#120a2a;background-size:220% 220%;}
+  .tsw.anim{animation:tsh 2.6s linear infinite;}
+  .tsw.on{outline:2px solid #ffd23f;outline-offset:1px;box-shadow:0 0 10px rgba(255,210,63,0.6);}
+  @keyframes tsh{0%{background-position:0% 50%}100%{background-position:100% 50%}}
   .mfoot{margin-top:6px;font-size:10px;font-weight:400;color:rgba(255,255,255,0.5);text-align:center;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.2</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.8.3</div>
 <div id="sbToast" style="position:fixed;left:50%;bottom:44px;transform:translateX(-50%);padding:6px 12px;border-radius:8px;background:rgba(20,10,40,0.82);color:#ff8fb8;font:700 13px system-ui,sans-serif;letter-spacing:0.04em;pointer-events:none;user-select:none;z-index:6;opacity:0;transition:opacity .3s"></div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button><button id="shopBtn" class="mbtn" type="button" tabindex="-1" title="Skin shop (K)" aria-label="Skin shop"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="3.5" y="0.5" width="3" height="2.5"/><rect x="2.5" y="3.2" width="5" height="3"/><rect x="1" y="3.4" width="1.3" height="2.6"/><rect x="7.7" y="3.4" width="1.3" height="2.6"/><rect x="3" y="6.4" width="1.6" height="3.1"/><rect x="5.4" y="6.4" width="1.6" height="3.1"/></svg></button></div>
 <div id="menuBack"></div>
 <div id="songMenu" class="menu" role="dialog" aria-label="Songs"><div class="mhead"><span>&#9835; SONGS</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="songList"></div><div class="mfoot">N = next song &middot; M = mute &middot; Esc = close</div></div>
 <div id="bgMenu" class="menu" role="dialog" aria-label="Backgrounds"><div class="mhead"><span>BACKGROUNDS</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><button id="bgRandom" class="mitem mtoggle" type="button" tabindex="-1"><span class="msw"></span><span class="mt"><span class="mn">RANDOM</span><span class="md">New random background each run / retry</span></span></button><div id="bgMode" class="mmode"></div><div id="bgList"></div><div class="mfoot">B = next background &middot; Esc = close</div></div>
-<div id="boardMenu" class="menu" role="dialog" aria-label="Scoreboard"><div class="mhead"><span>SCOREBOARD</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="boardMe" class="mmode"></div><div class="brow hd"><span class="brk">#</span><span class="bic"></span><span class="bnm">PLAYER</span><span class="blv">LEVEL</span></div><div id="boardList"></div><div id="boardSrc" class="bsrc"></div><div class="mfoot">L = scoreboard &middot; Esc = close</div></div>
-<div id="shopMenu" class="menu" role="dialog" aria-label="Skin shop"><div class="mhead"><span>SKIN SHOP</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="shopCoins" class="mmode"></div><div id="shopList"></div><div id="shopMsg" class="bsrc"></div><div class="mfoot">Coins: 1 per level (1-30), 2 (31-60), 3 (61+) &middot; K = shop &middot; Esc = close</div></div>
+<div id="boardMenu" class="menu" role="dialog" aria-label="Scoreboard"><div class="mhead"><span>SCOREBOARD</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="boardMe" class="mmode"></div><div class="brow hd"><span class="brk">#</span><span class="bic"></span><span class="bnm">PLAYER</span><span class="blv">LEVEL</span><span class="bpt">POINTS</span></div><div id="boardList"></div><div id="boardSrc" class="bsrc"></div><div class="mfoot">L = scoreboard &middot; Esc = close</div></div>
+<div id="shopMenu" class="menu" role="dialog" aria-label="Skin shop"><div class="mhead"><span>SKIN SHOP</span><button class="mclose" type="button" tabindex="-1" aria-label="Close">&times;</button></div><div class="mnote"></div><div id="shopCoins" class="mmode"></div><div id="shopList"></div><div id="shopMsg" class="bsrc"></div><div class="mfoot">Coins: 1 per level (1-30), 2 (31-60), 3 (61+) &middot; K = shop &middot; T = trail &middot; Esc = close</div></div>
 <div id="ptag"><span>PLAYER: <b id="ptagName"></b> &middot; <span id="ptagCoins"></span></span><button id="ptagBtn" type="button" tabindex="-1">CHANGE</button></div>
 <div id="nick"><div class="menu" role="dialog" aria-label="Nickname"><div class="mhead"><span id="nickTitle">ENTER NICKNAME</span><button id="nickClose" class="mclose" type="button" aria-label="Close">&times;</button></div><div class="md" style="font-size:11px">Your name on the scoreboard. 2-16 characters: letters, numbers, space, _ . -</div><input id="nickIn" class="nin" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="NICKNAME" enterkeyhint="go" aria-label="Nickname"><div id="nickErr" class="nerr"></div><button id="nickGo" class="nbtn" type="button">START</button></div></div>
 <script>
@@ -634,6 +644,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyB' && !e.repeat) { selectBg(bgIdx + 1); return; }
   if (e.code === 'KeyL' && !e.repeat) { openMenu('board'); return; }
   if (e.code === 'KeyK' && !e.repeat) { openMenu('shop'); return; }
+  if (e.code === 'KeyT' && !e.repeat) { selectTrail(trailIdx + 1, true); return; }
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); if (!e.repeat) press(); }
   else if (e.code === 'KeyM') { initAudio(); toggleMute(); }
   else if (e.code === 'KeyR' && !e.repeat && state === 'dead' && deadT > 0.45) { initAudio(); restartFromStart(); }
@@ -1242,7 +1253,49 @@ function drawRunner(c, sk, sw, air, t, silhouette) {
       if (!silhouette) { c.fillStyle = '#ff3f6e'; c.fillRect(-1, -45, 2, 2); } break;
   }
 }
+// ---- trail colours (v0.8.3): free, client-only, saved on this device. Overrides only the colour of the player's own trail.
+function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function ringOf(stops, n, cyclic) { // n precomputed 'rgb()' strings interpolated through the stops
+  const c = stops.map(hexRgb), out = [], segs = cyclic ? c.length : c.length - 1;
+  for (let k = 0; k < n; k++) { const f = k / (cyclic ? n : n - 1) * segs, j = Math.min(Math.floor(f), segs - 1), u = f - j, A = c[j], Bc = c[(j + 1) % c.length];
+    out.push('rgb(' + Math.round(A[0] + (Bc[0] - A[0]) * u) + ',' + Math.round(A[1] + (Bc[1] - A[1]) * u) + ',' + Math.round(A[2] + (Bc[2] - A[2]) * u) + ')'); }
+  return out;
+}
+const TRAILS = [{ id: 'skin', name: 'Skin default' }].concat(
+  [['cyan', 'Cyan', '#00e5ff'], ['pink', 'Pink', '#ff5fae'], ['gold', 'Gold', '#ffd23f'], ['green', 'Green', '#3ce05a'], ['red', 'Red', '#ff3b3b'], ['violet', 'Violet', '#a064ff'],
+   ['white', 'White', '#ffffff'], ['orange', 'Orange', '#ff8c1e'], ['lime', 'Lime', '#beff28'], ['teal', 'Teal', '#00bea8'], ['sky', 'Sky Blue', '#6ebeff'], ['navy', 'Navy', '#3a55d8'],
+   ['magenta', 'Magenta', '#ff28dc'], ['coral', 'Coral', '#ff7864'], ['mint', 'Mint', '#8cffc8'], ['silver', 'Silver', '#c8cdd7']]
+    .map(([id, name, c]) => ({ id, name, stops: [c], ring: [c], step: 0, speed: 0 })),
+  [['rainbow', 'Rainbow', ['#ff3b3b', '#ff9f1c', '#ffe23f', '#3ce05a', '#00d5ff', '#4a6aff', '#c050ff'], 48, true, 3, 40],
+   ['sunset', 'Sunset', ['#ffd166', '#ff8c42', '#ff4f7b', '#b13aa8', '#5b3cc4'], 30, false, 2, 0],
+   ['neon', 'Neon Two-Tone', ['#ff2fd0', '#00f0ff'], 2, true, 1, 7],
+   ['fire', 'Fire', ['#c81010', '#ff4a10', '#ff9a1a', '#ffe36a'], 14, false, 1, 0, { flicker: true }],
+   ['ice', 'Ice', ['#3a8cff', '#7fd8ff', '#d8f6ff', '#ffffff'], 14, false, 1, 0, { sparkle: true }],
+   ['ocean', 'Ocean', ['#0a2a8a', '#0a7ad0', '#00c8d0', '#80fff0'], 32, true, 2, 14],
+   ['aurora', 'Aurora', ['#5dffb0', '#20d0c0', '#7a5cff', '#d05cff'], 40, true, 2, 22],
+   ['galaxy', 'Galaxy', ['#3a12a0', '#8a2ae0', '#ff4fd8', '#4a6aff'], 32, true, 2, 10, { sparkle: true }],
+   ['candy', 'Candy', ['#ff6fb5', '#ffffff', '#7fffd4'], 3, true, 1, 6],
+   ['toxic', 'Toxic', ['#b0ff20', '#30ff60', '#e8ff40', '#60d000'], 24, true, 3, 30, { flicker: true }]]
+    .map(([id, name, stops, n, cyclic, step, speed, o]) => Object.assign({ id, name, stops, ring: n <= stops.length ? stops.slice() : ringOf(stops, n, cyclic), step, speed, anim: speed > 0 }, o || {})));
+let trailIdx = 0;
+try { trailIdx = Math.max(0, TRAILS.findIndex(t => t.id === localStorage.getItem('nightfall_trail'))); } catch (e) {}
+function selectTrail(i, announce) {
+  trailIdx = ((i % TRAILS.length) + TRAILS.length) % TRAILS.length; try { localStorage.setItem('nightfall_trail', TRAILS[trailIdx].id); } catch (e) {}
+  if (typeof menuOpen !== 'undefined' && menuOpen === 'shop') renderShop(); else if (announce) showToast('TRAIL: ' + TRAILS[trailIdx].name.toUpperCase(), '#5dffb0');
+}
 function drawTrail(sk) {
+  const tr = TRAILS[trailIdx];
+  if (tr.ring) { // chosen trail colour: same squares / embers / sparkles as the skin, colour from the precomputed ring
+    const n = P.trail.length, ring = tr.ring, L = ring.length, sh = Math.floor(time * tr.speed), fl = Math.floor(time * 18), base = sk.glow ? 0.42 : 0.38, spk = tr.sparkle || sk.trail === 'gold';
+    for (let i = 0; i < n; i++) {
+      const t = P.trail[i], a = i / n;
+      let k = tr.step ? (tr.anim ? i * tr.step + sh : Math.floor(a * (L - 1))) : 0; if (tr.flicker) k += (i * 7 + fl) % 3;
+      ctx.fillStyle = spk && i % 3 === 0 ? '#ffffff' : ring[k % L]; ctx.globalAlpha = a * (spk && i % 3 === 0 ? 0.45 : base);
+      ctx.fillRect(t.x - 8 * a, t.y - 8 * a, 16 * a, 16 * a);
+      if (sk.ember && i % 4 === 1) { ctx.fillStyle = ring[(k + 1) % L]; ctx.globalAlpha = a * 0.6; ctx.fillRect(t.x - 10 + ((i * 37) % 7), t.y + 6 - a * 10, 2, 2); }
+    }
+    ctx.globalAlpha = 1; return;
+  }
   for (let i = 0; i < P.trail.length; i++) {
     const t = P.trail[i], a = i / P.trail.length;
     if (sk.trail === 'aurora') ctx.fillStyle = `hsla(${(time * 80 + i * 22) % 360},95%,65%,${a * 0.35})`;
@@ -1484,12 +1537,23 @@ const BOARD_LIMIT = 100;
 const LocalStore = {
   load(key = 'nightfall_board') { try { const o = JSON.parse(localStorage.getItem(key) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } },
   save(o, key = 'nightfall_board') { try { localStorage.setItem(key, JSON.stringify(o)); } catch (e) {} },
-  submit(name, level) { const o = this.load(), k = name.toLowerCase(), cur = o[k];
-    if (!cur || level > (cur.level | 0)) { o[k] = { name: cur ? cur.name : name, level: level | 0, t: Date.now() }; this.save(o); } },
+  submit(name, level, pts) { const o = this.load(), k = name.toLowerCase(), cur = o[k], p = Math.max(cur ? cur.pts | 0 : 0, pts | 0);
+    if (!cur || level > (cur.level | 0)) { o[k] = { name: cur ? cur.name : name, level: level | 0, t: Date.now(), pts: p }; this.save(o); }
+    else if (p > (cur.pts | 0)) { cur.pts = p; this.save(o); } },
   levelOf(name) { const e = this.load()[String(name).toLowerCase()]; return e ? e.level | 0 : 0; },
+  pointsOf(name) { const e = this.load()[String(name).toLowerCase()]; return e ? e.pts | 0 : 0; },
   list() { return Object.values(this.load()).filter(e => e && typeof e.name === 'string' && !nameProblem(e.name))
-    .map(e => ({ name: e.name, level: e.level | 0, t: e.t || 0 })).sort((a, b) => b.level - a.level || a.t - b.t); },
+    .map(e => ({ name: e.name, level: e.level | 0, points: e.pts | 0, t: e.t || 0 })).sort((a, b) => b.level - a.level || a.t - b.t); },
 };
+// unique nicknames (v0.8.3): a random secret per device; the server keeps only its sha256 and gives a name to the first key that uses it
+function deviceKey() {
+  let k = ''; try { k = localStorage.getItem('nightfall_device_key') || ''; } catch (e) {}
+  if (!/^[0-9a-f-]{32,}$/i.test(k)) {
+    try { k = crypto.randomUUID(); } catch (e) { const b = new Uint8Array(16); crypto.getRandomValues(b); k = [...b].map(x => x.toString(16).padStart(2, '0')).join(''); }
+    try { localStorage.setItem('nightfall_device_key', k); } catch (e) {}
+  }
+  return k;
+}
 function makeSupabase(url, key) {
   const base = url.replace(/\/+$/, '') + '/rest/v1';
   // publishable keys are not JWTs: send them only as `apikey`; the legacy anon JWT also goes in Authorization: Bearer
@@ -1503,23 +1567,27 @@ function makeSupabase(url, key) {
     finally { clearTimeout(to); }
   }
   return {
-    async top() { // scores_board = scores + equipped skin (v0.8 migration); falls back to plain scores if the view is missing
-      let r; try { r = await req('/scores_board?select=name,best_level,skin&order=best_level.desc,updated_at.asc&limit=' + BOARD_LIMIT); }
-      catch (e) { if (!(e.status >= 400 && e.status < 500)) throw e; r = await req('/scores?select=name,best_level&order=best_level.desc,updated_at.asc&limit=' + BOARD_LIMIT); }
-      const a = await r.json(); if (!Array.isArray(a)) throw new Error('bad payload'); return a.map(x => ({ name: String(x.name), level: x.best_level | 0, skin: x.skin | 0 || 1 })); },
+    async top() { // scores_board = scores + equipped skin (v0.8) + best_points (v0.8.3); falls back to the older view / plain scores
+      const q = '&order=best_level.desc,updated_at.asc&limit=' + BOARD_LIMIT, soft = e => { if (!(e.status >= 400 && e.status < 500)) throw e; };
+      let r; try { r = await req('/scores_board?select=name,best_level,best_points,skin' + q); }
+      catch (e) { soft(e); try { r = await req('/scores_board?select=name,best_level,skin' + q); } catch (e2) { soft(e2); r = await req('/scores?select=name,best_level' + q); } }
+      const a = await r.json(); if (!Array.isArray(a)) throw new Error('bad payload');
+      return a.map(x => ({ name: String(x.name), level: x.best_level | 0, points: typeof x.best_points === 'number' ? x.best_points | 0 : null, skin: x.skin | 0 || 1 })); },
     async rpc(fn, body, extra) { return (await req('/rpc/' + fn, Object.assign({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, extra || {}))).json(); },
     profile(name) { return this.rpc('get_profile', { p_name: name }); },
-    buySkin(name, id) { return this.rpc('buy_skin', { p_name: name, p_skin_id: id | 0 }); },
-    equipSkin(name, id) { return this.rpc('equip_skin', { p_name: name, p_skin_id: id | 0 }); },
+    buySkin(name, id) { return this.rpc('buy_skin', { p_name: name, p_skin_id: id | 0, p_key: deviceKey() }); },
+    equipSkin(name, id) { return this.rpc('equip_skin', { p_name: name, p_skin_id: id | 0, p_key: deviceKey() }); },
+    claimName(name) { return this.rpc('claim_name', { p_name: name, p_key: deviceKey() }); },
     async countAbove(level) { // players strictly above `level` -> rank = count + 1 (for players outside the top 100)
       const r = await req('/scores?select=name&limit=1&best_level=gt.' + (level | 0), { headers: { Prefer: 'count=exact' } });
       const n = parseInt(String(r.headers.get('content-range') || '').split('/')[1], 10); return isNaN(n) ? null : n; },
     async startRun(name) { const r = await req('/rpc/start_run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_name: name }) }); const id = await r.json(); if (typeof id !== 'string' || !id) throw new Error('bad run id'); return id; },
+      body: JSON.stringify({ p_name: name, p_key: deviceKey() }) }); const id = await r.json(); if (typeof id !== 'string' || !id) throw new Error('bad run id'); return id; },
     async submit(name, level, runId, clientMs, keepalive) { const r = await req('/rpc/submit_score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: !!keepalive,
       body: JSON.stringify({ p_name: name, p_level: level | 0, p_run_id: runId, p_client_ms: Math.max(0, Math.round(clientMs)) }) });
       const t = await r.text(); let v = null; try { v = JSON.parse(t); } catch (e) {} // v0.8: {best_level, coins, earned}
       return v && typeof v === 'object' ? v : { best_level: parseInt(t, 10) || 0 }; },
+    submitPoints(name, runId, pts, keepalive) { return this.rpc('submit_points', { p_name: name, p_run_id: runId, p_points: Math.max(0, pts | 0), p_key: deviceKey() }, { keepalive: !!keepalive }); }, // v0.8.3
   };
 }
 let sbCfg = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY }, sbApi = null, boardSource = 'local';
@@ -1530,51 +1598,74 @@ let curRun = null, toastT = 0;
 function beginRun() {
   const run = { name: nick, t0: performance.now(), startedAt: Date.now(), id: null, ready: null };
   const r = remote(); curRun = run;
-  if (nick && r) run.ready = r.startRun(nick).then(id => { run.id = id; return id; }, () => null); // failed -> this run stays local-only
+  if (nick && r) run.ready = r.startRun(nick).then(id => { run.id = id; return id; }, e => { if (nameTaken(e)) lostName(run.name); return null; }); // failed -> this run stays local-only
   else run.ready = Promise.resolve(null);
 }
 function showToast(msg, color) { const el = document.getElementById('sbToast'); if (!el) return; el.textContent = msg; el.style.color = color || '#ff8fb8'; el.style.opacity = '1';
   clearTimeout(toastT); toastT = setTimeout(() => { el.style.opacity = '0'; }, 3500); }
 function rejected(e) { return !!(e && e.status >= 400 && e.status < 500); } // server said no (validation / speed check): retrying won't help
+function nameTaken(e) { return rejected(e) && /name taken/i.test(e.server || ''); }
+const TAKEN_MSG = 'That name is taken \u2014 pick another';
+function lostName(n) { // the server says another device owns this nickname: drop it and ask for a new one
+  if (!nick || cleanName(n).toLowerCase() !== nick.toLowerCase()) return;
+  nick = ''; try { localStorage.removeItem('nightfall_nick'); } catch (e) {}
+  curRun = null; boardBest = 0; profile = loadProfile(''); profileOnline = false; shopMsg = '';
+  openNick(); nickIn.value = cleanName(n); nickErr.textContent = TAKEN_MSG;
+}
 function tooFast(e) { return rejected(e) && /too fast/i.test(e.server || ''); }
 function pendingKey(name, runId) { return name.toLowerCase() + '|' + runId; }
+async function sendPoints(r, name, runId, pts, run) { // best points (v0.8.3 submit_points); any failure (old server, cap, offline) is ignored
+  if (!r || !runId || !(pts > 0)) return; if (run) run.sentPts = Math.max(run.sentPts || 0, pts | 0);
+  try { await r.submitPoints(name, runId, pts); } catch (e) {} }
 async function flushPending(r) { // scores that failed to upload while offline are retried on the next call; expired runs are dropped
   const pend = LocalStore.load('nightfall_board_pending'), keys = Object.keys(pend); if (!keys.length) return;
   for (const k of keys) { const e = pend[k];
     if (!e || !e.runId || !(Date.now() - (e.runStartedAt || 0) < RUN_MAX_AGE)) { delete pend[k]; LocalStore.save(pend, 'nightfall_board_pending'); continue; }
-    try { gotCoins(await r.submit(e.name, e.level, e.runId, e.clientMs), e.name, null); }
+    try { gotCoins(await r.submit(e.name, e.level, e.runId, e.clientMs), e.name, null); await sendPoints(r, e.name, e.runId, e.pts | 0); }
     catch (err) { if (!rejected(err)) throw err; if (tooFast(err)) showToast('SCORE NOT ACCEPTED: TOO FAST'); } // rejected -> drop it
     delete pend[k]; LocalStore.save(pend, 'nightfall_board_pending'); }
 }
 const Board = {
   get online() { return !!remote(); },
   get source() { return boardSource; },
-  async submitScore(name, level, run) { // run = the run this level was reached in (needed for the online board)
-    name = cleanName(name); level = level | 0; if (nameProblem(name) || level <= 0) return;
-    LocalStore.submit(name, level); // local copy always (offline fallback + own best)
+  async submitScore(name, level, run, pts) { // run = the run this level was reached in (needed for the online board); pts = run points at that moment
+    name = cleanName(name); level = level | 0; pts = Math.max(0, pts | 0); if (nameProblem(name) || level <= 0) return;
+    LocalStore.submit(name, level, pts); // local copy always (offline fallback + own best)
     const r = remote(); if (!r) { boardSource = 'local'; return; }
     if (!run || run.name.toLowerCase() !== name.toLowerCase()) return; // no server run for this score -> local only
     const clientMs = performance.now() - run.t0, runId = run.id || await run.ready;
     if (!runId) return; // start_run failed (offline / rate limited) -> this run counts locally only
-    try { await flushPending(r); gotCoins(await r.submit(name, level, runId, clientMs), name, run); boardSource = 'online'; }
+    try { await flushPending(r); gotCoins(await r.submit(name, level, runId, clientMs), name, run); boardSource = 'online'; await sendPoints(r, name, runId, pts, run); }
     catch (e) {
       if (tooFast(e)) { showToast('SCORE NOT ACCEPTED: TOO FAST'); return; }
       if (rejected(e)) return; // e.g. run expired / clock mismatch: not queued
       const pend = LocalStore.load('nightfall_board_pending'), k = pendingKey(name, runId);
-      if (!pend[k] || pend[k].level < level) { pend[k] = { name, level, runId, clientMs: Math.round(clientMs), runStartedAt: run.startedAt }; LocalStore.save(pend, 'nightfall_board_pending'); }
+      if (!pend[k] || pend[k].level < level) { pend[k] = { name, level, runId, clientMs: Math.round(clientMs), runStartedAt: run.startedAt, pts: Math.max(pts, pend[k] ? pend[k].pts | 0 : 0) }; LocalStore.save(pend, 'nightfall_board_pending'); }
+      else if (pts > (pend[k].pts | 0)) { pend[k].pts = pts; LocalStore.save(pend, 'nightfall_board_pending'); }
       boardSource = 'offline'; }
+  },
+  async submitPoints(name, run, pts) { // run end without a new level: only the points changed
+    name = cleanName(name); pts = Math.max(0, pts | 0); if (nameProblem(name) || !pts) return;
+    LocalStore.submit(name, LocalStore.levelOf(name), pts);
+    const r = remote(); if (!r || !run || run.name.toLowerCase() !== name.toLowerCase()) return;
+    const runId = run.id || await run.ready; if (!runId) return;
+    const pend = LocalStore.load('nightfall_board_pending'), k = pendingKey(name, runId);
+    if (pend[k]) { if (pts > (pend[k].pts | 0)) { pend[k].pts = pts; LocalStore.save(pend, 'nightfall_board_pending'); } return; } // its level is still queued: points go with it
+    await sendPoints(r, name, runId, pts, run);
   },
   async getBoard(me) { // -> { rows: [{name, level}] sorted high -> low (max 100), me: {level, rank, inList} | null, source }
     const r = remote(), local = LocalStore.list(); let rows = null, source = 'local';
     if (r) { try { await flushPending(r).catch(() => {}); rows = await r.top(); source = 'online'; } catch (e) { rows = null; source = 'offline'; } }
-    if (!rows) rows = local.slice(0, BOARD_LIMIT).map(x => ({ name: x.name, level: x.level, skin: me && x.name.toLowerCase() === me.toLowerCase() ? profile.equipped : 1 }));
+    if (!rows) rows = local.slice(0, BOARD_LIMIT).map(x => ({ name: x.name, level: x.level, points: x.points, skin: me && x.name.toLowerCase() === me.toLowerCase() ? profile.equipped : 1 }));
     let meInfo = null;
     if (me) { const k = me.toLowerCase(), idx = rows.findIndex(x => x.name.toLowerCase() === k);
       const level = Math.max(LocalStore.levelOf(me), idx >= 0 ? rows[idx].level : 0); let rank = idx >= 0 ? idx + 1 : null;
       if (idx < 0 && level > 0) {
         if (source === 'online') { try { const n = await r.countAbove(level); if (n != null) rank = n + 1; } catch (e) {} }
         else { const li = local.findIndex(x => x.name.toLowerCase() === k); if (li >= 0) rank = li + 1; } }
-      meInfo = { level, rank, inList: idx >= 0 }; }
+      const pr = idx >= 0 ? rows[idx].points : null, points = pr == null && source === 'online' ? null : Math.max(LocalStore.pointsOf(me), pr | 0);
+      if (idx >= 0) rows[idx].points = points;
+      meInfo = { level, rank, inList: idx >= 0, points }; }
     boardSource = source;
     return { rows, me: meInfo, source };
   },
@@ -1588,15 +1679,16 @@ function reportLevel(lv, final) { // called on every new max level and when a ru
   const run = curRun && curRun.name.toLowerCase() === nick.toLowerCase() ? curRun : null, sent = run ? run.sent || 0 : 0;
   const newBest = lv > boardBest; if (newBest) boardBest = lv;
   // send: every new personal best (live scoreboard), every 10 levels of a run, and at the end of a run (coins for this run)
+  const pts = points; // the run's points at this moment
   if (lv > sent && (newBest || final || lv - sent >= 10) && (run || newBest)) {
     if (run) run.sent = lv;
-    Board.submitScore(nick, lv, run).then(() => { if (final) showRunCoins(); if (menuOpen === 'board') renderBoard(); });
-  } else if (final) showRunCoins();
+    Board.submitScore(nick, lv, run, pts).then(() => { if (final) showRunCoins(); if (menuOpen === 'board') renderBoard(); });
+  } else if (final) { showRunCoins(); if (pts > (run ? run.sentPts || 0 : LocalStore.pointsOf(nick))) Board.submitPoints(nick, run, pts).then(() => { if (menuOpen === 'board') renderBoard(); }); }
 }
 function showRunCoins() { if (curRun && curRun.earned > 0 && state === 'dead') showToast('+' + curRun.earned + ' COINS THIS RUN', '#ffd23f'); }
 window.addEventListener('pagehide', () => { // closing mid-run: send the level reached so its coins aren't lost
   const r = remote(), run = curRun; if (!r || !nick || !run || !run.id || state !== 'play' || score <= (run.sent || 0)) return;
-  run.sent = score; r.submit(nick, score, run.id, performance.now() - run.t0, true).catch(() => {}); });
+  run.sent = score; const pts = points; r.submit(nick, score, run.id, performance.now() - run.t0, true).then(() => r.submitPoints(nick, run.id, pts, true)).catch(() => {}); });
 // ---- coins + skins profile (server: get_profile / buy_skin / equip_skin; coins credited by submit_score)
 function profileCache() { return LocalStore.load('nightfall_profile'); }
 function loadProfile(name) { const e = name && profileCache()[name.toLowerCase()];
@@ -1620,21 +1712,34 @@ async function refreshProfile() {
   if (!r) { profileOnline = false; updatePtag(); return; }
   try { applyProfile(await r.profile(n), n); } catch (e) { if (n === nick) { profileOnline = false; updatePtag(); } }
 }
-function shopErr(e) { const m = (e && e.server) || ''; return /not enough coins/i.test(m) ? 'NOT ENOUGH COINS' : /already owned/i.test(m) ? 'ALREADY OWNED'
+function shopErr(e) { const m = (e && e.server) || ''; return /name taken/i.test(m) ? 'NAME TAKEN' : /not enough coins/i.test(m) ? 'NOT ENOUGH COINS' : /already owned/i.test(m) ? 'ALREADY OWNED'
   : /not owned/i.test(m) ? 'NOT OWNED YET' : e && e.status ? 'NOT ALLOWED (' + (m || e.status) + ')' : 'OFFLINE · TRY AGAIN LATER'; }
 async function shopAction(kind, id) {
   const r = remote(); if (!r || !nick || shopBusy || !profileOnline) return;
   shopBusy = true; shopMsg = kind === 'buy' ? 'BUYING...' : 'EQUIPPING...'; renderShop();
   try { const p = await (kind === 'buy' ? r.buySkin(nick, id) : r.equipSkin(nick, id)); shopMsg = kind === 'buy' ? skinById(id).name.toUpperCase() + ' UNLOCKED!' : '';
     applyProfile(p, nick); }
-  catch (e) { shopMsg = shopErr(e); if (!e || !e.status) profileOnline = false; }
+  catch (e) { shopMsg = shopErr(e); if (!e || !e.status) profileOnline = false; if (nameTaken(e)) { shopBusy = false; lostName(nick); return; } }
   shopBusy = false; renderShop();
+}
+function trailCss(tr) { // swatch background
+  if (!tr.ring) { const t = mySkin().trail; return t === 'aurora' ? 'linear-gradient(135deg,#5dffb0,#7a5cff,#ff5fae,#ffd23f)' : t === 'gold' ? 'linear-gradient(135deg,#ffd23f,#fff,#ffd23f)' : 'rgb(' + t + ')'; }
+  return tr.stops.length === 1 ? tr.stops[0] : 'linear-gradient(135deg,' + tr.stops.concat(tr.anim ? [tr.stops[0]] : []).join(',') + ')';
+}
+function trailSection() {
+  const sec = document.createElement('div'); sec.className = 'tsec'; sec.id = 'trailSec';
+  const hd = document.createElement('div'); hd.className = 'thd'; hd.innerHTML = '<span>TRAIL \u00b7 <b></b></span><i>FREE \u00b7 T = next</i>'; hd.querySelector('b').textContent = TRAILS[trailIdx].name.toUpperCase(); sec.appendChild(hd);
+  const g = document.createElement('div'); g.className = 'tgrid';
+  TRAILS.forEach((tr, i) => { const b = document.createElement('button'); b.type = 'button'; b.tabIndex = -1; b.className = 'tsw' + (i === trailIdx ? ' on' : '') + (tr.anim ? ' anim' : '');
+    b.style.background = trailCss(tr); b.style.backgroundSize = tr.anim ? '220% 220%' : ''; b.title = tr.name; b.dataset.trail = tr.id; if (!tr.ring) b.textContent = 'SKIN';
+    b.addEventListener('pointerdown', e => { if (e.button > 0) return; selectTrail(i); }); g.appendChild(b); });
+  sec.appendChild(g); return sec;
 }
 function renderShop() {
   const on = profileOnline && !!remote();
   shopCoinsEl.innerHTML = on ? 'COINS: <b>' + profile.coins + '</b> · PLAYER ' : 'COINS: <b>unavailable (offline)</b> · buying disabled · ';
   shopCoinsEl.appendChild(document.createTextNode(on ? nick : ''));
-  shopList.textContent = '';
+  shopList.textContent = ''; shopList.appendChild(trailSection());
   for (const sk of SKINS) {
     const own = owns(sk.id), eq = mySkin().id === sk.id, d = document.createElement('div');
     d.className = 'sitem' + (eq ? ' eq' : '') + (own ? '' : ' lock') + (sk.premium ? ' prem' : '');
@@ -1666,14 +1771,25 @@ function openNick() {
   updatePtag(); setTimeout(() => { try { nickIn.focus(); } catch (e) {} }, 30);
 }
 function closeNick() { if (!nick) return; nickOpen = false; nickEl.classList.remove('open'); try { nickIn.blur(); } catch (e) {} updatePtag(); }
-function confirmNick() {
+let nickBusy = false;
+async function confirmNick() {
+  if (nickBusy) return;
   const n = cleanName(nickIn.value), err = nameProblem(n);
   if (err) { nickErr.textContent = err; return; }
+  const r = remote();
+  if (r) { // ask the server first; offline -> accepted locally as before
+    const label = nickGo.textContent; nickBusy = true; nickGo.disabled = true; nickGo.textContent = 'CHECKING...'; nickErr.textContent = '';
+    let res = 'ok'; try { await r.claimName(n); } catch (e) { res = nameTaken(e) ? 'taken' : rejected(e) ? 'bad' : 'offline'; }
+    nickBusy = false; nickGo.disabled = false; nickGo.textContent = label;
+    if (!nickOpen) return;
+    if (res === 'taken') { nickErr.textContent = TAKEN_MSG; return; }
+    if (res === 'bad') { nickErr.textContent = 'Please choose another name'; return; }
+  }
   const first = !nick; nick = n; try { localStorage.setItem('nightfall_nick', nick); } catch (e) {}
   if (curRun && curRun.name.toLowerCase() !== nick.toLowerCase()) curRun = null;
   profile = loadProfile(nick); profileOnline = false; shopMsg = ''; refreshProfile(); // a run belongs to one nickname; the next fresh run gets a new id
   boardBest = LocalStore.levelOf(nick);
-  if (first && best > boardBest) { boardBest = best; Board.submitScore(nick, best); } // first nickname inherits this device's best level
+  if (first && best > boardBest) { boardBest = best; Board.submitScore(nick, best, null, bestPoints); } // first nickname inherits this device's best level
   nickOpen = false; nickEl.classList.remove('open'); try { nickIn.blur(); } catch (e) {}
   if (first && state === 'menu') { initAudio(); start(); } // START begins the first run
   updatePtag();
@@ -1689,9 +1805,10 @@ nickIn.addEventListener('input', () => { if (nickErr.textContent) nickErr.textCo
 ptagBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; openNick(); });
 // ---- scoreboard window
 let boardReq = 0;
-function bRow(rank, name, level, me, cls, skin) {
+function fmtPts(n) { return n == null ? '\u2013' : (n | 0).toLocaleString('en-US'); }
+function bRow(rank, name, level, me, cls, skin, pts) {
   const d = document.createElement('div'); d.className = 'brow' + (me ? ' me' : '') + (cls ? ' ' + cls : '');
-  for (const [c, t] of [['brk', rank], ['bnm', name], ['blv', level]]) { const sp = document.createElement('span'); sp.className = c; sp.textContent = t;
+  for (const [c, t] of [['brk', rank], ['bnm', name], ['blv', level], ['bpt', fmtPts(pts)]]) { const sp = document.createElement('span'); sp.className = c; sp.textContent = t;
     if (c === 'bnm') { const im = document.createElement('img'); im.className = 'bic'; im.alt = ''; im.src = skinIcon(skin || 1, false); im.title = skinById(skin || 1).name; d.appendChild(im); }
     d.appendChild(sp); }
   d.dataset.skin = skin || 1; return d;
@@ -1702,14 +1819,15 @@ async function renderBoard() {
   if (id !== boardReq) return;
   boardList.textContent = ''; let meRow = null; const k = nick.toLowerCase();
   if (!res.rows.length) { const d = document.createElement('div'); d.className = 'brow empty'; d.textContent = 'No scores yet. Play a run!'; boardList.appendChild(d); }
-  res.rows.forEach((r, i) => { const me = !!nick && r.name.toLowerCase() === k, d = bRow(i + 1, r.name, r.level, me, '', me ? mySkin().id : r.skin); if (me) meRow = d; boardList.appendChild(d); });
+  res.rows.forEach((r, i) => { const me = !!nick && r.name.toLowerCase() === k, d = bRow(i + 1, r.name, r.level, me, '', me ? mySkin().id : r.skin, r.points); if (me) meRow = d; boardList.appendChild(d); });
   if (res.me && !res.me.inList && res.rows.length) { const g = document.createElement('div'); g.className = 'brow gap'; g.textContent = '\u2026'; boardList.appendChild(g); }
-  if (res.me && !res.me.inList) { meRow = bRow(res.me.rank || '\u2013', nick, res.me.level, true, '', mySkin().id); boardList.appendChild(meRow); }
-  boardMeEl.textContent = nick ? 'YOU: ' + nick + ' \u00b7 BEST LEVEL ' + (res.me ? res.me.level : 0) + (res.me && res.me.rank ? ' \u00b7 #' + res.me.rank : '') : '';
+  if (res.me && !res.me.inList) { meRow = bRow(res.me.rank || '\u2013', nick, res.me.level, true, '', mySkin().id, res.me.points); boardList.appendChild(meRow); }
+  boardMeEl.textContent = nick ? 'YOU: ' + nick + ' \u00b7 BEST LEVEL ' + (res.me ? res.me.level : 0) + (res.me && res.me.points != null ? ' \u00b7 ' + fmtPts(res.me.points) + ' PTS' : '') + (res.me && res.me.rank ? ' \u00b7 #' + res.me.rank : '') : '';
   boardSrcEl.textContent = res.source === 'online' ? 'ONLINE \u00b7 top ' + BOARD_LIMIT : res.source === 'offline' ? 'OFFLINE \u00b7 showing scores saved on this device' : 'LOCAL \u00b7 scores saved on this device';
   if (meRow) boardList.scrollTop = Math.max(0, meRow.offsetTop - boardList.offsetTop - boardList.clientHeight / 2);
 }
-if (!nick) openNick(); else { updatePtag(); refreshProfile(); }
+if (!nick) openNick(); else { updatePtag(); refreshProfile(); verifyNick(); }
+function verifyNick() { const r = remote(), n = nick; if (r && n) r.claimName(n).catch(e => { if (nameTaken(e)) lostName(n); }); } // stored name claimed elsewhere first -> ask again
 refreshMenus();
 Music.onChange = refreshMenus; // auto rotation updates the song window
 window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; },
@@ -1724,9 +1842,10 @@ window.__nightfall = { get state() { return state; }, get score() { return score
     get rotation() { return Music.rotation; }, rotateNow() { Music.rotateNow(); } },
   bg: { get idx() { return bgIdx; }, get name() { return THEMES[bgIdx].name; }, get ids() { return THEMES.map(t => t.id); },
     get random() { return bgRandom; }, get manual() { return bgManual; }, get fading() { return !!bgFade; }, select: selectBg, toggleRandom: toggleBgRandom },
+  trail: { get id() { return TRAILS[trailIdx].id; }, get name() { return TRAILS[trailIdx].name; }, ids: TRAILS.map(t => t.id), select(id) { const i = TRAILS.findIndex(t => t.id === id); if (i >= 0) selectTrail(i); }, next() { selectTrail(trailIdx + 1, true); } },
   menu: { get open() { return menuOpen; }, show: openMenu, close: closeMenu, get paused() { return (!!menuOpen || nickOpen) && state === 'play'; } },
   board: { get nick() { return nick; }, get nickOpen() { return nickOpen; }, openNick, validate: nameProblem, get boardBest() { return boardBest; },
-    getBoard: () => Board.getBoard(nick), submitScore: (n, l, run) => Board.submitScore(n, l, run), get run() { return curRun; }, beginRun, get profile() { return profile; }, get profileOnline() { return profileOnline; }, refreshProfile, shopAction, skins: SKINS, get skin() { return mySkin().id; }, get source() { return Board.source; }, get online() { return Board.online; },
+    getBoard: () => Board.getBoard(nick), get deviceKey() { return deviceKey(); }, verifyNick, confirmNick, submitScore: (n, l, run, pts) => Board.submitScore(n, l, run, pts), get run() { return curRun; }, beginRun, get profile() { return profile; }, get profileOnline() { return profileOnline; }, refreshProfile, shopAction, skins: SKINS, get skin() { return mySkin().id; }, get source() { return Board.source; }, get online() { return Board.online; },
     _testConfig(url, key) { sbCfg = { url: url || '', key: key || '' }; sbApi = null; } } }; // _testConfig: test hook only (real config = constants above)
 requestAnimationFrame(frame);
 })();
