@@ -65,7 +65,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.4</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.5</div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button></div>
 <div id="menuBack"></div>
@@ -724,13 +724,14 @@ function demoBot() {
 }
 
 // ================= RENDER =================
-let backdrop = null, stars = [], city = [], peaks = [], flakes = [];
+let backdrop = null, stars = [], city = [], peaks = [], flakes = [], palms = [];
 function makeBackdrop() {
   stars = [];
   for (let i = 0; i < 160; i++) stars.push({ x: Math.random(), y: Math.random() * 0.75, s: Math.random() * 1.6 + 0.3, tw: Math.random() * 6 });
   city = [];
   let x = 0; while (x < 2400) { const w = rand(40, 110); city.push({ id: city.length, x, w, h: rand(60, 220), win: Math.random() }); x += w + rand(4, 30); }
   peaks = []; x = 0; while (x < 2400) { const w = rand(170, 330); peaks.push({ x, w, h: rand(90, 210) }); x += w * rand(0.45, 0.8); }
+  palms = []; x = 0; while (x < 2400) { palms.push({ id: palms.length, x, h: rand(80, 135), lean: rand(-1, 1), ph: Math.random() * 6.28 }); x += rand(70, 170); }
   flakes = [];
   for (let i = 0; i < 90; i++) { const d = Math.random(); flakes.push({ x: Math.random(), y: Math.random(), s: 1 + Math.round(d * 2), sp: 0.03 + d * 0.06, ph: Math.random() * 6.28, w: 0.6 + Math.random(), d, c: `rgba(235,242,255,${(0.45 + d * 0.5).toFixed(2)})` }); }
 }
@@ -743,6 +744,8 @@ const THEMES = [
     sw: 'linear-gradient(#1e0828,#1e0828) 0 100%/100% 26% no-repeat,radial-gradient(circle at 50% 70%,#ffd23f 0 8px,transparent 9px),linear-gradient(#140630,#3d0f5c 35%,#b0246d 62%,#ff6a3d 82%)' },
   { id: 'snow', name: 'Snowy Night', desc: 'Falling snow, icy peaks, cosy town',
     sw: 'linear-gradient(#0d1430,#0d1430) 0 100%/100% 22% no-repeat,linear-gradient(#dfe9ff,#dfe9ff) 0 74%/100% 6% no-repeat,radial-gradient(circle at 24% 28%,#e8f0ff 0 3px,transparent 4px),linear-gradient(#02050f,#0b1a3a 45%,#1d3766 78%)' },
+  { id: 'vice', name: 'Vice City Sunset', desc: 'Hazy Miami dusk, palms, neon deco skyline',
+    sw: 'linear-gradient(#ff3daa,#ff3daa) 30% 76%/14% 2px no-repeat,linear-gradient(#28f0dc,#28f0dc) 70% 76%/12% 2px no-repeat,linear-gradient(#14061f,#14061f) 0 100%/100% 24% no-repeat,radial-gradient(circle at 62% 66%,#ffe7a8 0 5px,rgba(255,150,110,0.55) 7px,transparent 15px),linear-gradient(#0a2a43,#5a1a6e 30%,#ff3d8b 55%,#ff8a3d 70%,#ffc46b 76%,#0d4a5a 78%)' },
 ];
 const BG_FADE_MS = 420;
 let bgIdx = 0, bgManual = 0, bgRandom = false, bgFade = null;
@@ -759,11 +762,11 @@ function drawBG() {
   let th = bgIdx, veil = 0;
   if (bgFade) { const k = (performance.now() - bgFade.t0) / BG_FADE_MS;
     if (k >= 1) bgFade = null; else if (k < 0.5) { th = bgFade.from; veil = k * 2; } else veil = (1 - k) * 2; }
-  if (th === 1) drawBGSunset(); else if (th === 2) drawBGSnow(); else drawBGNeon();
+  if (th === 1) drawBGSunset(); else if (th === 2) drawBGSnow(); else if (th === 3) drawBGVice(); else drawBGNeon();
   if (veil > 0) { ctx.fillStyle = `rgba(5,4,15,${(veil * 0.92).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
 }
 // parallax skyline with warm windows (same art as Neon City, recoloured). cols[layer] null = skip layer
-function drawSkyline(cols, hMul, cap) {
+function drawSkyline(cols, hMul, cap, deco, gaps) {
   const cx = cam ? cam.x : 0, cy = cam ? cam.y : 0;
   const WC = ['255,214,110', '255,180,80', '255,236,170', '255,150,70', '255,200,120'];
   for (let layer = 0; layer < 2; layer++) {
@@ -774,6 +777,7 @@ function drawSkyline(cols, hMul, cap) {
     for (let k = 0; k < 3; k++) for (const b of city) {
       const bx = b.x * sc - off + k * total, bh = b.h * hMul;
       if (bx > W || bx + b.w * sc < 0) continue;
+      if (gaps && winHash(b.id, 9, layer) < gaps) continue; // beachfront gaps
       const top = base - bh * sc;
       ctx.fillStyle = cols[layer]; ctx.fillRect(bx, top, b.w * sc, H);
       if (cap) { ctx.fillStyle = cap; ctx.fillRect(bx - sc * 2, top - 3 * sc, b.w * sc + sc * 4, 5 * sc); }
@@ -787,8 +791,76 @@ function drawSkyline(cols, hMul, cap) {
         ctx.fillStyle = `rgba(${col},${(al * 0.22).toFixed(3)})`; ctx.fillRect(wx - 3 * sc, wy - 3 * sc, ww + 6 * sc, wh + 6 * sc);
         ctx.fillStyle = `rgba(${col},${al.toFixed(3)})`; ctx.fillRect(wx, wy, Math.round(ww), Math.round(wh));
       }
+      if (deco) { // art-deco stepped crown + pink/teal neon roof strip, vertical neon signs on the near layer
+        const hb = winHash(b.id, 5, layer), bw = b.w * sc, nc = hb < 0.5 ? '255,61,170' : '40,240,220', na = layer ? 1 : 0.55;
+        let roof = top;
+        if (hb < 0.6) { const w1 = Math.round(bw * 0.6), w2 = Math.round(bw * 0.3);
+          ctx.fillStyle = cols[layer]; ctx.fillRect(Math.round(bx + (bw - w1) / 2), top - 8 * sc, w1, 8 * sc); ctx.fillRect(Math.round(bx + (bw - w2) / 2), top - 14 * sc, w2, 6 * sc);
+          ctx.fillStyle = `rgba(${nc},${(0.9 * na).toFixed(2)})`; ctx.fillRect(Math.round(bx + (bw - w2) / 2), top - 14 * sc, w2, Math.max(1, 2 * sc)); }
+        ctx.fillStyle = `rgba(${nc},${(0.22 * na).toFixed(2)})`; ctx.fillRect(bx, roof - 2 * sc, bw, 7 * sc);
+        ctx.fillStyle = `rgba(${nc},${(0.95 * na).toFixed(2)})`; ctx.fillRect(bx, roof + sc, bw, Math.max(1, 2 * sc));
+        if (layer && hb > 0.72 && bh > 90) { const sx = Math.round(bx + bw * 0.12), sy = Math.round(top + 14 * sc), sh = Math.round(Math.min(bh * sc * 0.45, 48 * sc)), sw = Math.round(6 * sc);
+          const sc2 = hb > 0.86 ? '40,240,220' : '255,61,170';
+          ctx.fillStyle = `rgba(${sc2},0.25)`; ctx.fillRect(sx - 4 * sc, sy - 4 * sc, sw + 8 * sc, sh + 8 * sc);
+          ctx.fillStyle = `rgba(${sc2},0.95)`; ctx.fillRect(sx, sy, sw, sh);
+          ctx.fillStyle = cols[layer]; for (let q = sy + 6 * sc; q < sy + sh - 2 * sc; q += 9 * sc) ctx.fillRect(sx + sc, Math.round(q), sw - 2 * sc, Math.max(1, 2 * sc)); }
+      }
     }
   }
+}
+// pixel palm silhouettes at a given parallax depth
+function drawPalms(par, scl, baseFrac, col, density, seed) {
+  const cx = cam ? cam.x : 0, cy = cam ? cam.y : 0, sc = SCALE * scl;
+  const base = H * baseFrac - (cy + 120) * SCALE * par * 0.5, total = 2400 * sc, off = ((cx * SCALE * par) % total + total) % total;
+  const px = Math.max(2, Math.round(3.5 * sc)); ctx.fillStyle = col;
+  for (let k = 0; k < 3; k++) for (const pm of palms) {
+    if (winHash(pm.id + seed, 1, 2) > density) continue;
+    const x0 = pm.x * sc - off + k * total, h = pm.h * sc;
+    if (x0 > W + 80 * sc || x0 < -80 * sc) continue;
+    const n = Math.max(6, Math.round(h / px)); let tx = x0, ty = base;
+    for (let i = 0; i < n; i++) { const f = i / n; tx = x0 + pm.lean * f * f * h * 0.35; ty = base - i * px; ctx.fillRect(Math.round(tx), Math.round(ty), px + (i < n * 0.3 ? px : 0), px + 1); }
+    const sway = Math.sin(time * 0.8 + pm.ph) * 0.05, len = h * 0.11;
+    for (let a = 0; a < 7; a++) { const ang = Math.PI * (0.06 + a * 0.147) + sway, dx = Math.cos(ang), dy = Math.sin(ang);
+      for (let j = 1; j <= 6; j++) ctx.fillRect(Math.round(tx + dx * j * len * 0.6), Math.round(ty - dy * j * len * 0.5 + j * j * len * 0.07), px * 2, j < 5 ? px * 2 : px); }
+    ctx.fillRect(Math.round(tx - px), Math.round(ty - px), px * 3, px * 2);
+  }
+}
+function drawBGVice() {
+  const g = ctx.createLinearGradient(0, 0, 0, H), hz = H * 0.76;
+  g.addColorStop(0, '#0a2a43'); g.addColorStop(0.3, '#5a1a6e'); g.addColorStop(0.55, '#ff3d8b'); g.addColorStop(0.7, '#ff8a3d'); g.addColorStop(0.76, '#ffc46b'); g.addColorStop(1, '#1a0a2a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  skyStars(0.22, 0.4);
+  // soft hazy sun sitting low on the horizon
+  const sx = W * 0.66, r = Math.min(W, H) * 0.15, sy = hz - r * 0.5, px = Math.max(2, Math.round(r / 12));
+  const sg = ctx.createRadialGradient(sx, sy, r * 0.3, sx, sy, r * 4);
+  sg.addColorStop(0, 'rgba(255,170,120,0.55)'); sg.addColorStop(0.4, 'rgba(255,110,150,0.22)'); sg.addColorStop(1, 'rgba(255,110,150,0)');
+  ctx.fillStyle = sg; ctx.fillRect(sx - r * 4, sy - r * 4, r * 8, r * 8);
+  for (let y = -r; y < r && sy + y < hz; y += px) {
+    const u = (y + r) / (2 * r), yy = y + px / 2, half = Math.round(Math.sqrt(Math.max(0, r * r - yy * yy)) / px) * px;
+    ctx.fillStyle = `rgba(255,${Math.round(238 - u * 120)},${Math.round(176 - u * 80)},0.85)`;
+    ctx.fillRect(Math.round(sx - half), Math.round(sy + y), half * 2, px);
+  }
+  ctx.fillStyle = 'rgba(255,120,170,0.28)'; // humid haze streaks across the sun
+  for (const [o, w2] of [[-0.45, 2.6], [-0.05, 3.4], [0.22, 2.2]]) ctx.fillRect(Math.round(sx - r * w2 * 0.5), Math.round(sy + r * o), Math.round(r * w2), px * 2);
+  // ocean at the horizon with a shimmering sun reflection
+  const og = ctx.createLinearGradient(0, hz, 0, H);
+  og.addColorStop(0, '#c2487a'); og.addColorStop(0.25, '#3a2a6a'); og.addColorStop(1, '#0a3a4a');
+  ctx.fillStyle = og; ctx.fillRect(0, hz, W, H - hz);
+  for (let j = 0, y = hz + px; y < hz + H * 0.12; j++, y += px * 2) {
+    const k = (y - hz) / (H * 0.12), w2 = r * 1.5 * (1 - k * 0.55) * (0.7 + 0.3 * Math.sin(time * 3 + j * 1.7));
+    ctx.fillStyle = `rgba(255,190,120,${(0.55 * (1 - k)).toFixed(3)})`; ctx.fillRect(Math.round(sx - w2 / 2), Math.round(y), Math.round(w2), px);
+  }
+  // skyline + palms at several depths
+  drawSkyline(['#3a1450', null], 0.6, null, true, 0.35);
+  drawPalms(0.14, 0.7, 0.8, '#3a1048', 0.6, 11);
+  drawSkyline([null, '#1a0a2a'], 0.5, null, true, 0.5);
+  drawPalms(0.26, 1.0, 0.88, '#1c0828', 0.5, 23);
+  drawPalms(0.4, 1.35, 0.97, '#0a0212', 0.3, 37);
+  // bloom haze around the horizon + teal/pink night fog
+  const hg = ctx.createLinearGradient(0, H * 0.5, 0, H * 0.95);
+  hg.addColorStop(0, 'rgba(255,90,150,0)'); hg.addColorStop(0.55, 'rgba(255,90,150,0.16)'); hg.addColorStop(1, 'rgba(255,90,150,0)');
+  ctx.fillStyle = hg; ctx.fillRect(0, H * 0.5, W, H * 0.45);
+  bottomFog('30,200,210', 0.2);
 }
 function skyStars(maxY, alphaMul) {
   for (const s of stars) { if (s.y > maxY) continue;
