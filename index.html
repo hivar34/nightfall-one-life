@@ -11,11 +11,26 @@
     touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
     -webkit-tap-highlight-color:transparent;overscroll-behavior:none;}
   canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;touch-action:none;}
+  #vol{position:fixed;top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));z-index:6;
+    display:flex;align-items:center;gap:6px;padding:3px 8px 3px 4px;background:rgba(10,8,32,0.45);
+    border:1px solid rgba(255,210,63,0.35);box-shadow:0 0 10px rgba(120,60,200,0.25);opacity:0.75;
+    font:700 11px monospace;color:rgba(255,255,255,0.8);touch-action:none;transition:opacity .2s;}
+  #vol:hover,#vol.drag{opacity:1;}
+  #volBtn{width:30px;height:30px;padding:0;margin:0;border:0;background:none;font-size:18px;line-height:30px;cursor:pointer;
+    color:#fff;filter:drop-shadow(0 1px 0 #000);touch-action:none;}
+  #volBar{position:relative;width:84px;height:30px;cursor:pointer;touch-action:none;outline:none;}
+  #volBar:focus-visible{outline:1px dashed rgba(255,210,63,0.7);}
+  #volTrack{position:absolute;left:0;right:0;top:12px;height:6px;background:rgba(255,255,255,0.18);}
+  #volFill{position:absolute;left:0;top:12px;height:6px;width:60%;background:#ffd23f;box-shadow:0 0 6px rgba(255,210,63,0.6);}
+  #volKnob{position:absolute;top:8px;left:60%;width:8px;height:14px;margin-left:-4px;background:#fff;border:1px solid #000;}
+  #vol.muted #volFill{background:#6d6699;box-shadow:none;}
+  #volPct{min-width:26px;text-align:right;}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.2</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.3</div>
+<div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <script>
 (() => {
 'use strict';
@@ -62,6 +77,8 @@ let best = 0;
 try { best = parseInt(localStorage.getItem('nightfall_best') || '0', 10) || 0; } catch (e) {}
 let muted = false;
 try { muted = localStorage.getItem('nightfall_muted') === '1'; } catch (e) {}
+let volume = 0.6; // master volume 0..1 (music + SFX), persisted
+try { const v = localStorage.getItem('nightfall_volume'); if (v !== null && !isNaN(parseFloat(v))) volume = clamp(parseFloat(v) / 100, 0, 1); } catch (e) {}
 let P, plats, parts, cam, caption, shake, score, time, deadT, nearMiss, lastClutch, capIdx, newBestShown, almostShown, deathReason, flash;
 let checkpoint = 0;   // highest checkpoint reached in this session (0 = none)
 let easeIdx = -1;    // platform right after a respawn is generated static/solid (fairness)
@@ -142,16 +159,27 @@ function genNext() {
 function lerp(a, b, t) { return a + (b - a) * t; }
 
 // ================= AUDIO =================
-let AC = null, master = null;
+// graph: SFX -> master ; music voices -> musicBus -> musicLP -> musicDuck -> master ; master -> limiter -> out
+let AC = null, master = null, musicBus = null, musicLP = null, musicDuck = null, limiter = null;
+function masterLevel() { return muted ? 0 : volume * volume * 1.4; } // 60% ~= old fixed level (0.5)
+function applyVolume() { if (master) master.gain.setTargetAtTime(masterLevel(), AC.currentTime, 0.02); }
 function initAudio() {
-  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  if (AC) { if (AC.state === 'suspended' && !document.hidden) AC.resume(); Music.start(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
-    master = AC.createGain(); master.gain.value = muted ? 0 : 0.5; master.connect(AC.destination);
+    limiter = AC.createDynamicsCompressor();
+    limiter.threshold.value = -6; limiter.knee.value = 6; limiter.ratio.value = 12; limiter.attack.value = 0.003; limiter.release.value = 0.15;
+    limiter.connect(AC.destination);
+    master = AC.createGain(); master.gain.value = masterLevel(); master.connect(limiter);
+    musicDuck = AC.createGain(); musicDuck.gain.value = 1; musicDuck.connect(master);
+    musicLP = AC.createBiquadFilter(); musicLP.type = 'lowpass'; musicLP.frequency.value = 18000; musicLP.Q.value = 0.7; musicLP.connect(musicDuck);
+    musicBus = AC.createGain(); musicBus.gain.value = 0.32; musicBus.connect(musicLP); // music sits under the SFX
+    Music.start();
   } catch (e) { AC = null; }
 }
+function sfxSilent() { return !AC || muted || volume <= 0; }
 function tone(f0, f1, dur, type = 'square', vol = 0.3, delay = 0) {
-  if (!AC || muted) return;
+  if (sfxSilent()) return;
   const t = AC.currentTime + delay;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t);
@@ -161,9 +189,13 @@ function tone(f0, f1, dur, type = 'square', vol = 0.3, delay = 0) {
   o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
 }
 let noiseBuf = null;
-function noise(dur, vol = 0.3, freq = 800, delay = 0) {
-  if (!AC || muted) return;
+function getNoise() {
   if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  return noiseBuf;
+}
+function noise(dur, vol = 0.3, freq = 800, delay = 0) {
+  if (sfxSilent()) return;
+  getNoise();
   const t = AC.currentTime + delay;
   const s = AC.createBufferSource(); s.buffer = noiseBuf;
   const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(freq, t);
@@ -181,6 +213,101 @@ const SFX = {
   start() { tone(220, 440, 0.2, 'square', 0.1); tone(330, 660, 0.25, 'square', 0.08, 0.1); },
   best() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, f, 0.15, 'triangle', 0.15, i * 0.08)); },
 };
+
+// ================= MUSIC =================
+// Procedural night-phonk loop (WebAudio only, no samples). Lookahead scheduler: a 25ms timer schedules
+// 16th-note steps ~150ms ahead on the audio clock; every voice is a few short-lived nodes that stop + get GC'd.
+const Music = (() => {
+  const BPM = 138, STEP = 60 / BPM / 4, LOOKAHEAD = 0.15, TICK = 25;
+  const A = 55; // A1
+  const hz = semi => A * Math.pow(2, semi / 12);
+  // 4-bar progression (A minor / phrygian-ish): Am | Am | F | E
+  const ROOT = [0, 0, -4, -5];                 // bass roots (semitones from A1)
+  const PAD = [[12, 15, 19], [12, 15, 19], [8, 12, 15], [7, 11, 14]]; // chord tones (A2-based)
+  // cowbell riff, step -> semitone (from A4 = +48), one row per bar
+  const BELL = [
+    { 0: 0, 3: 3, 6: 7, 8: 5, 10: 3, 12: 0, 14: -2 },
+    { 0: 0, 3: 3, 6: 8, 8: 7, 10: 3, 11: 2, 12: 0 },
+    { 0: -4, 3: 0, 6: 3, 8: 7, 10: 5, 12: 3, 14: 0 },
+    { 0: -1, 3: 2, 6: 5, 8: 4, 10: 2, 12: -1, 13: 2, 14: 4 },
+  ];
+  const KICK = [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0];
+  let started = false, timer = null, nextT = 0, step = 0, shaper = null;
+  function out() { return musicBus; }
+  function getShaper() { // shared soft-clip for the 808
+    if (!shaper) { shaper = AC.createWaveShaper(); const n = 1024, c = new Float32Array(n);
+      for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 2.5); }
+      shaper.curve = c; shaper.connect(out()); }
+    return shaper;
+  }
+  function env(g, t, peak, a, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+  function kick(t) {
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    env(g, t, 1.0, 0.003, 0.32); o.connect(g); g.connect(out()); o.start(t); o.stop(t + 0.36);
+  }
+  function bass(t, semi, len, slide) {
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(hz(semi), t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(hz(semi + slide), t + len * 0.6);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.55, t + 0.01);
+    g.gain.setTargetAtTime(0.0001, t + len * 0.55, len * 0.18);
+    o.connect(g); g.connect(getShaper()); o.start(t); o.stop(t + len + 0.1);
+  }
+  function snare(t, v = 1) {
+    const s = AC.createBufferSource(); s.buffer = getNoise(); s.playbackRate.value = 1.1;
+    const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.8;
+    const g = AC.createGain(); env(g, t, 0.55 * v, 0.002, 0.18);
+    s.connect(f); f.connect(g); g.connect(out()); s.start(t, Math.random() * 0.5); s.stop(t + 0.22);
+    const o = AC.createOscillator(), og = AC.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.08);
+    env(og, t, 0.25 * v, 0.002, 0.08); o.connect(og); og.connect(out()); o.start(t); o.stop(t + 0.12);
+  }
+  function hat(t, v, open) {
+    const s = AC.createBufferSource(); s.buffer = getNoise();
+    const f = AC.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7500;
+    const g = AC.createGain(); const d = open ? 0.22 : 0.035; env(g, t, 0.16 * v, 0.001, d);
+    s.connect(f); f.connect(g); g.connect(out()); s.start(t, Math.random() * 0.5); s.stop(t + d + 0.02);
+  }
+  function bell(t, semi, v = 1) { // phonk cowbell: two detuned squares through a bandpass
+    const f0 = hz(semi + 48), g = AC.createGain(), bp = AC.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = f0 * 1.6; bp.Q.value = 3;
+    env(g, t, 0.13 * v, 0.002, 0.22);
+    bp.connect(g); g.connect(out());
+    for (const m of [1, 1.48]) { const o = AC.createOscillator(); o.type = 'square'; o.frequency.value = f0 * m; o.connect(bp); o.start(t); o.stop(t + 0.26); }
+  }
+  function pad(t, chord, len) { // dark detuned saw pad, one per bar
+    const g = AC.createGain(), lp = AC.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, t); lp.frequency.linearRampToValueAtTime(1100, t + len * 0.5); lp.frequency.linearRampToValueAtTime(600, t + len);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.045, t + 0.25); g.gain.setValueAtTime(0.045, t + len - 0.2); g.gain.linearRampToValueAtTime(0.0001, t + len + 0.05);
+    lp.connect(g); g.connect(out());
+    chord.forEach((n, i) => { const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(n + 12); o.detune.value = (i - 1) * 8; o.connect(lp); o.start(t); o.stop(t + len + 0.1); });
+  }
+  function schedule(i, t) {
+    const s = i % 16, bar = Math.floor(i / 16) % 4, sect = Math.floor(i / 64) % 2; // 8-bar loop: A section, then B (busier)
+    if (s === 0) pad(t, PAD[bar], STEP * 16);
+    if (KICK[s] || (bar === 3 && s === 14) || (sect && s === 13)) { kick(t); bass(t, ROOT[bar], s === 10 ? STEP * 4 : STEP * (s === 0 ? 7 : 3), sect && s === 10 ? 12 : 0); }
+    if (s === 4 || s === 12) snare(t);
+    if (bar === 3 && s >= 13 && sect) snare(t, 0.4 + (s - 13) * 0.2);
+    if (s % 2 === 0) hat(t, s % 4 === 0 ? 1 : 0.6, sect && s === 6);
+    else if (sect || (bar === 3 && s > 11)) hat(t, 0.4, false);
+    const b = BELL[bar][s]; if (b !== undefined) bell(t, b + (sect && bar % 2 ? 12 : 0), s === 0 ? 1 : 0.8);
+  }
+  function tick() {
+    if (!AC || AC.state !== 'running') return;
+    const now = AC.currentTime;
+    if (nextT < now - 0.05) nextT = now + 0.05; // fell behind (tab throttled etc.): skip ahead, never burst
+    while (nextT < now + LOOKAHEAD) { if (!muted && volume > 0) schedule(step, nextT); step = (step + 1) % 128; nextT += STEP; }
+  }
+  return {
+    start() { if (started || !AC) return; started = true; nextT = AC.currentTime + 0.1; step = 0; timer = setInterval(tick, TICK); },
+    get playing() { return started; },
+    // smooth duck on game over (quieter + darker), full on play/menu
+    duck(on) { if (!AC) return; const t = AC.currentTime;
+      musicDuck.gain.setTargetAtTime(on ? 0.45 : 1, t, on ? 0.15 : 0.4);
+      musicLP.frequency.setTargetAtTime(on ? 900 : 18000, t, on ? 0.2 : 0.5); },
+  };
+})();
+document.addEventListener('visibilitychange', () => { if (!AC) return; if (document.hidden) AC.suspend(); else AC.resume(); });
 
 // ================= INPUT =================
 let pressed = false, lastAction = 0;
@@ -211,16 +338,53 @@ function restartBtnActive() { return state === 'dead' && checkpoint > 0 && deadT
 function inRestartBtn(cx, cy) { if (!restartBtnActive()) return false; const r = restartBtnRect(); return cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h; }
 function toggleMute() {
   muted = !muted; try { localStorage.setItem('nightfall_muted', muted ? '1' : '0'); } catch (e) {}
-  if (master) master.gain.value = muted ? 0 : 0.5;
+  if (!muted && volume <= 0) setVolume(0.6); // unmuting at 0% restores a sensible level
+  applyVolume(); updateVolUI();
 }
-function inMuteBtn(cx, cy) { return cx > W - 56 && cy < 56; }
+function setVolume(v, save = true) {
+  volume = clamp(Math.round(v * 100) / 100, 0, 1);
+  if (volume > 0 && muted) { muted = false; try { localStorage.setItem('nightfall_muted', '0'); } catch (e) {} }
+  if (save) try { localStorage.setItem('nightfall_volume', String(Math.round(volume * 100))); } catch (e) {}
+  applyVolume(); updateVolUI();
+}
+// ---- volume bar (DOM overlay, top-right). Its events never reach the game (no jump / start).
+const volEl = document.getElementById('vol'), volBtn = document.getElementById('volBtn'), volBar = document.getElementById('volBar');
+const volFill = document.getElementById('volFill'), volKnob = document.getElementById('volKnob'), volPct = document.getElementById('volPct');
+function updateVolUI() {
+  const pct = Math.round(volume * 100), off = muted || pct === 0;
+  volFill.style.width = pct + '%'; volKnob.style.left = pct + '%';
+  volPct.textContent = off ? 'OFF' : pct + '%'; volBtn.textContent = off ? '🔇' : '🔊';
+  volEl.classList.toggle('muted', off); volBar.setAttribute('aria-valuenow', String(pct));
+  volBtn.setAttribute('aria-label', off ? 'Unmute' : 'Mute');
+}
+let volDrag = null;
+function volFromX(cx) { const r = volBar.getBoundingClientRect(); return clamp((cx - r.left) / r.width, 0, 1); }
+['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchmove', 'touchend', 'contextmenu'].forEach(ev =>
+  volEl.addEventListener(ev, e => { e.stopPropagation(); if (ev === 'pointerup') release(); if (ev !== 'pointermove' && ev !== 'pointerup') e.preventDefault(); }, { passive: false }));
+volBtn.addEventListener('pointerdown', e => { if (e.button > 0) return; initAudio(); toggleMute(); });
+volBar.addEventListener('pointerdown', e => {
+  if (e.button > 0) return; initAudio(); volDrag = e.pointerId; volEl.classList.add('drag');
+  try { volBar.setPointerCapture(e.pointerId); } catch (err) {}
+  setVolume(volFromX(e.clientX), false);
+});
+volBar.addEventListener('pointermove', e => { if (volDrag === e.pointerId) setVolume(volFromX(e.clientX), false); });
+function volEnd(e) { if (volDrag !== e.pointerId) return; volDrag = null; volEl.classList.remove('drag'); setVolume(volume, true); }
+volBar.addEventListener('pointerup', volEnd);
+volBar.addEventListener('pointercancel', volEnd);
+volBar.addEventListener('lostpointercapture', volEnd);
+volBar.addEventListener('keydown', e => { // keyboard a11y when focused via Tab; arrows don't reach the game
+  const k = e.code; let d = 0;
+  if (k === 'ArrowRight' || k === 'ArrowUp') d = 0.05; else if (k === 'ArrowLeft' || k === 'ArrowDown') d = -0.05;
+  if (d) { e.preventDefault(); e.stopPropagation(); initAudio(); setVolume(volume + d); }
+});
+updateVolUI();
 window.addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); if (!e.repeat) press(); }
-  else if (e.code === 'KeyM') toggleMute();
+  else if (e.code === 'KeyM') { initAudio(); toggleMute(); }
   else if (e.code === 'KeyR' && !e.repeat && state === 'dead' && deadT > 0.45) { initAudio(); restartFromStart(); }
 });
 window.addEventListener('keyup', e => { if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Enter') { e.preventDefault(); release(); } });
-cv.addEventListener('pointerdown', e => { e.preventDefault(); if (inMuteBtn(e.clientX, e.clientY)) { initAudio(); toggleMute(); return; }
+cv.addEventListener('pointerdown', e => { e.preventDefault();
   if (inRestartBtn(e.clientX, e.clientY)) { initAudio(); restartFromStart(); return; } press(); });
 window.addEventListener('pointerup', release);
 window.addEventListener('pointercancel', release);
@@ -557,8 +721,7 @@ function drawUI() {
   const u = Math.min(W, H) / 100 * DPR; // ui unit
   const cw = W * DPR, ch = H * DPR;
   if (flash > 0) { ctx.fillStyle = `rgba(255,210,63,${flash * 0.18})`; ctx.fillRect(0, 0, cw, ch); }
-  // mute icon
-  ctx.globalAlpha = 0.7; outlined(muted ? '🔇' : '🔊', cw - 28 * DPR, 28 * DPR, 22 * DPR, '#fff'); ctx.globalAlpha = 1;
+  // (speaker icon now lives in the DOM volume bar, top-right)
   if (state === 'menu') {
     ctx.fillStyle = 'rgba(5,4,20,0.45)'; ctx.fillRect(0, 0, cw, ch);
     const ts = Math.min(cw / 9, u * 13);
@@ -616,8 +779,10 @@ const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 // ================= LOOP =================
 let last = performance.now(), acc = 0;
+let duckedFor = null;
 function frame(now) {
   let dt = (now - last) / 1000; last = now;
+  const wantDuck = state === 'dead'; if (AC && wantDuck !== duckedFor) { duckedFor = wantDuck; Music.duck(wantDuck); }
   if (dt > 0.1) dt = 0.1;
   acc += dt;
   while (acc >= DT) { step(DT); acc -= DT; }
@@ -633,7 +798,10 @@ reset();
 if (demo) { state = 'play'; showCaption(['NO CHECKPOINT.', 'ONE LIFE.'], '#ffd23f', 2.2); }
 window.__nightfall = { get state() { return state; }, get score() { return score; }, get best() { return best; }, start, press, release,
   get checkpoint() { return checkpoint; }, restartFromStart, get bot() { return botOn; }, set bot(v) { botOn = !!v; },
-  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, get player() { return P; }, get plats() { return plats; } };
+  get groundIdx() { return P && P.ground ? P.ground.idx : null; }, get player() { return P; }, get plats() { return plats; },
+  audio: { get volume() { return volume; }, set volume(v) { setVolume(v); }, get muted() { return muted; }, toggleMute,
+    get masterTarget() { return master ? masterLevel() : null; }, get masterGain() { return master ? master.gain.value : null; },
+    get music() { return Music.playing; }, get ctxState() { return AC ? AC.state : null; } } };
 requestAnimationFrame(frame);
 })();
 </script>
