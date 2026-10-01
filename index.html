@@ -91,7 +91,8 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.7</div>
+<div id="ver" style="position:fixed;left:10px;bottom:8px;font:600 12px system-ui,sans-serif;color:rgba(255,255,255,0.55);pointer-events:none;user-select:none;z-index:5">v0.7.1</div>
+<div id="sbToast" style="position:fixed;left:50%;bottom:44px;transform:translateX(-50%);padding:6px 12px;border-radius:8px;background:rgba(20,10,40,0.82);color:#ff8fb8;font:700 13px system-ui,sans-serif;letter-spacing:0.04em;pointer-events:none;user-select:none;z-index:6;opacity:0;transition:opacity .3s"></div>
 <div id="vol" title="Volume (M = mute)"><button id="volBtn" type="button" tabindex="-1" aria-label="Mute">🔊</button><div id="volBar" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><div id="volTrack"></div><div id="volFill"></div><div id="volKnob"></div></div><span id="volPct">60%</span></div>
 <div id="mbtns"><button id="songBtn" class="mbtn" type="button" tabindex="-1" title="Songs (N = next song)" aria-label="Songs"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="6" y="1" width="1.5" height="6.5"/><rect x="6" y="1" width="3" height="1.5"/><rect x="8" y="2" width="1.5" height="2.5"/><rect x="2.5" y="6" width="5" height="3"/><rect x="3.5" y="5.5" width="3" height="4"/></svg></button><button id="bgBtn" class="mbtn" type="button" tabindex="-1" title="Backgrounds (B = next background)" aria-label="Backgrounds"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><path d="M0 9.5L3.5 3.5L5.5 6.5L7 4.5L10 9.5Z"/></svg></button><button id="boardBtn" class="mbtn" type="button" tabindex="-1" title="Scoreboard (L)" aria-label="Scoreboard"><svg viewBox="0 0 10 10" fill="currentColor"><rect x="2.5" y="1" width="5" height="3.6"/><rect x="0.8" y="1.4" width="1.4" height="2.2"/><rect x="7.8" y="1.4" width="1.4" height="2.2"/><rect x="3.2" y="4.6" width="3.6" height="0.9"/><rect x="4.3" y="5.4" width="1.4" height="1.8"/><rect x="2.8" y="7.2" width="4.4" height="1.1"/><rect x="2.2" y="8.3" width="5.6" height="1.2"/></svg></button></div>
 <div id="menuBack"></div>
@@ -549,6 +550,7 @@ function start(fromCp = 0) {
   if (fromCp) points = cpPoints; else { points = 0; cpPoints = 0; } // respawn restores the points held at that checkpoint; a fresh run resets them
   combo = 0; prevClutch = false; popups = []; newBestPts = false;
   if (!fromCp) checkpoint = 0; // restart from the very beginning clears the session checkpoint
+  if (!fromCp) beginRun(); // scoreboard speed check: fresh run = new server run id; checkpoint respawns keep the same run
   reset(fromCp); state = 'play';
   if (fromCp) showCaption(['CHECKPOINT ' + fromCp + ' SAVED', 'GO!'], '#5dffb0', 1.8); // fresh run: no start caption
   SFX.start(); pressed = true; P.holding = false;
@@ -1422,7 +1424,9 @@ function makeSupabase(url, key) {
   async function req(path, opt = {}) {
     const ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
     try { const r = await fetch(base + path, Object.assign({}, opt, { headers: Object.assign({}, auth, opt.headers || {}), signal: ac.signal }));
-      if (!r.ok) throw new Error('HTTP ' + r.status); return r; }
+      if (!r.ok) { let msg = ''; try { const j = await r.json(); msg = String((j && j.message) || ''); } catch (e) {}
+        const err = new Error(msg || 'HTTP ' + r.status); err.status = r.status; err.server = msg; throw err; }
+      return r; }
     finally { clearTimeout(to); }
   }
   return {
@@ -1431,26 +1435,53 @@ function makeSupabase(url, key) {
     async countAbove(level) { // players strictly above `level` -> rank = count + 1 (for players outside the top 100)
       const r = await req('/scores?select=name&limit=1&best_level=gt.' + (level | 0), { headers: { Prefer: 'count=exact' } });
       const n = parseInt(String(r.headers.get('content-range') || '').split('/')[1], 10); return isNaN(n) ? null : n; },
-    async submit(name, level) { const r = await req('/rpc/submit_score', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_name: name, p_level: level | 0 }) }); return parseInt(await r.text(), 10) || 0; },
+    async startRun(name) { const r = await req('/rpc/start_run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_name: name }) }); const id = await r.json(); if (typeof id !== 'string' || !id) throw new Error('bad run id'); return id; },
+    async submit(name, level, runId, clientMs) { const r = await req('/rpc/submit_score', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_name: name, p_level: level | 0, p_run_id: runId, p_client_ms: Math.max(0, Math.round(clientMs)) }) }); return parseInt(await r.text(), 10) || 0; },
   };
 }
 let sbCfg = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY }, sbApi = null, boardSource = 'local';
 function remote() { if (!sbCfg.url || !sbCfg.key) return null; if (!sbApi) sbApi = makeSupabase(sbCfg.url, sbCfg.key); return sbApi; }
-async function flushPending(r) { // scores that failed to upload while offline are retried on the next call
+// ---- server runs (speed check): start_run at a fresh run gives a run id; scores are submitted with it + client ms since run start
+const RUN_MAX_AGE = 6 * 3600 * 1000 - 5 * 60 * 1000; // server rejects runs older than 6 h; keep 5 min of slack
+let curRun = null, toastT = 0;
+function beginRun() {
+  const run = { name: nick, t0: performance.now(), startedAt: Date.now(), id: null, ready: null };
+  const r = remote(); curRun = run;
+  if (nick && r) run.ready = r.startRun(nick).then(id => { run.id = id; return id; }, () => null); // failed -> this run stays local-only
+  else run.ready = Promise.resolve(null);
+}
+function showToast(msg) { const el = document.getElementById('sbToast'); if (!el) return; el.textContent = msg; el.style.opacity = '1';
+  clearTimeout(toastT); toastT = setTimeout(() => { el.style.opacity = '0'; }, 3500); }
+function rejected(e) { return !!(e && e.status >= 400 && e.status < 500); } // server said no (validation / speed check): retrying won't help
+function tooFast(e) { return rejected(e) && /too fast/i.test(e.server || ''); }
+function pendingKey(name, runId) { return name.toLowerCase() + '|' + runId; }
+async function flushPending(r) { // scores that failed to upload while offline are retried on the next call; expired runs are dropped
   const pend = LocalStore.load('nightfall_board_pending'), keys = Object.keys(pend); if (!keys.length) return;
-  for (const k of keys) { await r.submit(pend[k].name, pend[k].level); delete pend[k]; LocalStore.save(pend, 'nightfall_board_pending'); }
+  for (const k of keys) { const e = pend[k];
+    if (!e || !e.runId || !(Date.now() - (e.runStartedAt || 0) < RUN_MAX_AGE)) { delete pend[k]; LocalStore.save(pend, 'nightfall_board_pending'); continue; }
+    try { await r.submit(e.name, e.level, e.runId, e.clientMs); }
+    catch (err) { if (!rejected(err)) throw err; if (tooFast(err)) showToast('SCORE NOT ACCEPTED: TOO FAST'); } // rejected -> drop it
+    delete pend[k]; LocalStore.save(pend, 'nightfall_board_pending'); }
 }
 const Board = {
   get online() { return !!remote(); },
   get source() { return boardSource; },
-  async submitScore(name, level) {
+  async submitScore(name, level, run) { // run = the run this level was reached in (needed for the online board)
     name = cleanName(name); level = level | 0; if (nameProblem(name) || level <= 0) return;
     LocalStore.submit(name, level); // local copy always (offline fallback + own best)
     const r = remote(); if (!r) { boardSource = 'local'; return; }
-    try { await flushPending(r); await r.submit(name, level); boardSource = 'online'; }
-    catch (e) { const pend = LocalStore.load('nightfall_board_pending'), k = name.toLowerCase();
-      if (!pend[k] || pend[k].level < level) { pend[k] = { name, level }; LocalStore.save(pend, 'nightfall_board_pending'); } boardSource = 'offline'; }
+    if (!run || run.name.toLowerCase() !== name.toLowerCase()) return; // no server run for this score -> local only
+    const clientMs = performance.now() - run.t0, runId = run.id || await run.ready;
+    if (!runId) return; // start_run failed (offline / rate limited) -> this run counts locally only
+    try { await flushPending(r); await r.submit(name, level, runId, clientMs); boardSource = 'online'; }
+    catch (e) {
+      if (tooFast(e)) { showToast('SCORE NOT ACCEPTED: TOO FAST'); return; }
+      if (rejected(e)) return; // e.g. run expired / clock mismatch: not queued
+      const pend = LocalStore.load('nightfall_board_pending'), k = pendingKey(name, runId);
+      if (!pend[k] || pend[k].level < level) { pend[k] = { name, level, runId, clientMs: Math.round(clientMs), runStartedAt: run.startedAt }; LocalStore.save(pend, 'nightfall_board_pending'); }
+      boardSource = 'offline'; }
   },
   async getBoard(me) { // -> { rows: [{name, level}] sorted high -> low (max 100), me: {level, rank, inList} | null, source }
     const r = remote(), local = LocalStore.list(); let rows = null, source = 'local';
@@ -1473,7 +1504,7 @@ try { nick = cleanName(localStorage.getItem('nightfall_nick') || ''); if (namePr
 let boardBest = nick ? LocalStore.levelOf(nick) : 0, nickOpen = false, ptagState = null;
 function reportLevel(lv) { // called on every new max level and when a run ends
   if (!nick || lv <= boardBest) return; boardBest = lv;
-  Board.submitScore(nick, lv).then(() => { if (menuOpen === 'board') renderBoard(); });
+  Board.submitScore(nick, lv, curRun).then(() => { if (menuOpen === 'board') renderBoard(); });
 }
 const nickEl = document.getElementById('nick'), nickIn = document.getElementById('nickIn'), nickErr = document.getElementById('nickErr');
 const nickGo = document.getElementById('nickGo'), nickClose = document.getElementById('nickClose'), nickTitle = document.getElementById('nickTitle');
@@ -1491,6 +1522,7 @@ function confirmNick() {
   const n = cleanName(nickIn.value), err = nameProblem(n);
   if (err) { nickErr.textContent = err; return; }
   const first = !nick; nick = n; try { localStorage.setItem('nightfall_nick', nick); } catch (e) {}
+  if (curRun && curRun.name.toLowerCase() !== nick.toLowerCase()) curRun = null; // a run belongs to one nickname; the next fresh run gets a new id
   boardBest = LocalStore.levelOf(nick);
   if (first && best > boardBest) { boardBest = best; Board.submitScore(nick, best); } // first nickname inherits this device's best level
   nickOpen = false; nickEl.classList.remove('open'); try { nickIn.blur(); } catch (e) {}
@@ -1543,7 +1575,7 @@ window.__nightfall = { get state() { return state; }, get score() { return score
     get random() { return bgRandom; }, get manual() { return bgManual; }, get fading() { return !!bgFade; }, select: selectBg, toggleRandom: toggleBgRandom },
   menu: { get open() { return menuOpen; }, show: openMenu, close: closeMenu, get paused() { return (!!menuOpen || nickOpen) && state === 'play'; } },
   board: { get nick() { return nick; }, get nickOpen() { return nickOpen; }, openNick, validate: nameProblem, get boardBest() { return boardBest; },
-    getBoard: () => Board.getBoard(nick), submitScore: (n, l) => Board.submitScore(n, l), get source() { return Board.source; }, get online() { return Board.online; },
+    getBoard: () => Board.getBoard(nick), submitScore: (n, l, run) => Board.submitScore(n, l, run), get run() { return curRun; }, beginRun, get source() { return Board.source; }, get online() { return Board.online; },
     _testConfig(url, key) { sbCfg = { url: url || '', key: key || '' }; sbApi = null; } } }; // _testConfig: test hook only (real config = constants above)
 requestAnimationFrame(frame);
 })();
