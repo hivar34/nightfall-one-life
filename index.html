@@ -377,13 +377,20 @@ function drawBG() {
       const bx = b.x * sc - off + k * total;
       if (bx > W || bx + b.w * sc < 0) continue;
       ctx.fillRect(bx, base - b.h * sc, b.w * sc, H);
-      if (layer && b.win > 0.25) { ctx.fillStyle = 'rgba(255,210,63,0.75)';
-        // stable lights: on/off decided per building + window index (not screen position)
-        const top = base - b.h * sc, rows = Math.max(0, Math.floor((b.h * sc - 20 * sc) / (22 * sc))), cols = Math.max(0, Math.floor((b.w * sc - 18 * sc) / (18 * sc)) + 1);
+      { // warm, stable window lights on every building (decided per building + window index)
+        const WC = ['255,214,110', '255,180,80', '255,236,170', '255,150,70', '255,200,120'];
+        const top = base - b.h * sc, gx = 18 * sc, gy = 22 * sc, ww = 6 * sc, wh = 8 * sc;
+        const rows = Math.max(1, Math.floor((b.h * sc - 20 * sc) / gy)), cols = Math.max(1, Math.floor((b.w * sc - 18 * sc) / gx) + 1);
+        const dim = layer ? 1 : 0.6;
         for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-          if (winHash(b.id, i, j) < 0.35) ctx.fillRect(Math.round(bx + 8 * sc + i * 18 * sc), Math.round(top + 10 * sc + j * 22 * sc), Math.round(6 * sc), Math.round(8 * sc));
+          const r = winHash(b.id + layer * 997, i, j);
+          if (r > 0.62) continue;
+          const col = WC[(winHash(b.id + 31, i, j) * WC.length) | 0], al = (0.6 + 0.4 * winHash(b.id + 77, i, j)) * dim;
+          const wx = Math.round(bx + 8 * sc + i * gx), wy = Math.round(top + 10 * sc + j * gy);
+          ctx.fillStyle = `rgba(${col},${(al * 0.22).toFixed(3)})`; ctx.fillRect(wx - 3 * sc, wy - 3 * sc, ww + 6 * sc, wh + 6 * sc);
+          ctx.fillStyle = `rgba(${col},${al.toFixed(3)})`; ctx.fillRect(wx, wy, Math.round(ww), Math.round(wh));
         }
-        ctx.fillStyle = '#140b2e'; }
+        ctx.fillStyle = layer ? '#140b2e' : '#21134a'; }
     }
   }
   // void fog glow at bottom
